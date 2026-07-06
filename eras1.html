@@ -1,0 +1,1320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Neural Networks — Interactive Guide</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #f0e8d8; color: #1a1a18;
+    padding: 24px 20px 48px; max-width: 720px; margin: 0 auto;
+  }
+
+  section {
+    margin-bottom: 48px;
+    padding-bottom: 40px;
+    border-bottom: 1px solid #e0dfd8;
+  }
+  section:last-child { border-bottom: none; margin-bottom: 0; }
+
+  h2 { font-size: 24px; font-weight: 700; margin-bottom: 10px; color: #1a1a18; line-height: 1.3; }
+  .section-lead { font-size: 14px; color: #6b6a63; line-height: 1.65; margin-bottom: 28px; }
+
+  h3 { font-size: 15px; font-weight: 600; margin: 32px 0 12px; color: #1a1a18; }
+  h3:first-of-type { margin-top: 8px; }
+  h3 .step-tag {
+    display: inline-block; background: #1a1a18; color: #f9f9f7;
+    font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 5px;
+    margin-right: 8px; vertical-align: middle;
+  }
+
+  p.body-text { font-size: 13.5px; color: #3a3a36; margin-bottom: 10px; line-height: 1.55; }
+
+  .row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  label { font-size: 13px; color: #6b6a63; min-width: 90px; }
+  input[type=range] { flex: 1; accent-color: #2a78d6; }
+  .val { font-size: 13px; font-weight: 500; color: #1a1a18; min-width: 40px; text-align: right; font-family: monospace; }
+
+  .eq-box {
+    background: #f0f0ee; border: 0.5px solid #d8d7cf; border-radius: 10px;
+    padding: 12px 16px; font-family: monospace; font-size: 13px;
+    color: #1a1a18; margin-bottom: 16px; white-space: pre; line-height: 1.8;
+  }
+
+  .tabs { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; }
+  .tab {
+    padding: 5px 14px; border: 0.5px solid #c3c2b7; border-radius: 6px;
+    font-size: 13px; cursor: pointer; background: transparent; color: #6b6a63; font-family: inherit;
+  }
+  .tab:hover { background: #e8e8e4; }
+  .tab.active { background: #1a1a18; color: #f9f9f7; border-color: transparent; }
+
+  .chart-wrap { position: relative; width: 100%; height: 300px; margin-bottom: 10px; }
+  .chart-wrap.sm { height: 260px; }
+  canvas { border-radius: 8px; }
+
+  .legend { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 16px; }
+  .leg { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #6b6a63; }
+  .dash { width: 22px; height: 2px; display: inline-block; }
+
+  /* rings comparison */
+  .model-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px; }
+  @media (max-width: 560px) { .model-grid { grid-template-columns: 1fr; } }
+
+  .model-card {
+    background: #f0f0ee; border: 1.5px solid transparent; border-radius: 10px;
+    padding: 14px; cursor: pointer; transition: border-color 0.15s, background 0.15s;
+  }
+  .model-card:hover { background: #e8e8e4; }
+  .model-card.active { border-color: #2a78d6; background: #eef4fd; }
+  .model-title { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  .model-arch { font-size: 11px; color: #6b6a63; font-family: monospace; margin-bottom: 8px; }
+  .model-acc { font-size: 22px; font-weight: 700; font-family: monospace; }
+  .model-acc.bad { color: #e34948; }
+  .model-acc.good { color: #1baf7a; }
+  .model-note { font-size: 11px; color: #6b6a63; margin-top: 4px; }
+
+  .callout {
+    background: #eef4fd; border: 0.5px solid #b8d0f0; border-radius: 10px;
+    padding: 12px 14px; font-size: 13px; line-height: 1.65; margin-top: 16px;
+  }
+  .callout strong { color: #2a78d6; }
+
+  /* depth section */
+  .math-panel {
+    background: #f0f0ee; border: 0.5px solid #d8d7cf; border-radius: 12px;
+    padding: 16px; margin-bottom: 20px; font-size: 13px; line-height: 1.75;
+  }
+  .math-panel .math-title {
+    font-size: 11px; color: #6b6a63; text-transform: uppercase;
+    letter-spacing: 0.05em; margin-bottom: 12px;
+  }
+  .math-panel code, .math-eq {
+    font-family: monospace; font-size: 12.5px; display: block;
+    background: #fff; border: 0.5px solid #d8d7cf; border-radius: 6px;
+    padding: 8px 12px; margin: 8px 0; white-space: pre-wrap;
+  }
+  .math-panel .warn {
+    background: #fff8e6; border: 0.5px solid #e8d48a; border-radius: 8px;
+    padding: 10px 12px; margin-top: 10px; font-size: 12px;
+  }
+
+  .arch-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 18px; }
+  @media (max-width: 560px) { .arch-grid { grid-template-columns: 1fr; } }
+
+  .arch-card {
+    background: #f0f0ee; border: 1.5px solid transparent; border-radius: 10px;
+    padding: 12px; cursor: pointer; transition: border-color 0.15s, background 0.15s;
+  }
+  .arch-card:hover { background: #e8e8e4; }
+  .arch-card.active { border-color: #2a78d6; background: #eef4fd; }
+  .arch-title { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  .arch-sub { font-size: 11px; color: #6b6a63; margin-bottom: 10px; }
+  .arch-diagram { display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap; }
+  .layer-col { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .neuron { width: 14px; height: 14px; border-radius: 50%; background: #2a78d6; opacity: 0.7; }
+  .neuron.output { background: #e34948; }
+  .arrow { font-size: 12px; color: #c3c2b7; }
+
+  .stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 18px; }
+  .stat { background: #f0f0ee; border-radius: 10px; padding: 10px 14px; }
+  .stat-label { font-size: 11px; color: #6b6a63; margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .stat-val { font-size: 20px; font-weight: 600; font-family: monospace; }
+  .stat-sub { font-size: 11px; color: #6b6a63; margin-top: 2px; }
+
+  .layer-stack { display: flex; flex-direction: column; gap: 8px; margin: 16px 0; }
+  .layer-row {
+    display: flex; align-items: center; gap: 10px;
+    background: #fff; border: 0.5px solid #d8d7cf; border-radius: 8px; padding: 8px 12px;
+    font-size: 12px;
+  }
+  .layer-badge {
+    background: #1a1a18; color: #f9f9f7; border-radius: 4px;
+    padding: 2px 8px; font-size: 10px; font-weight: 600; white-space: nowrap;
+  }
+  .layer-desc { color: #6b6a63; flex: 1; }
+  .layer-formula { font-family: monospace; font-size: 11px; color: #2a78d6; }
+
+  .insight { background: #eef4fd; border: 0.5px solid #b8d0f0; border-radius: 10px; padding: 12px 14px; font-size: 13px; line-height: 1.6; }
+  .insight strong { color: #2a78d6; }
+
+  /* embeddings section */
+  .card { background: #faf6ee; border: 0.5px solid #d8d7cf; border-radius: 12px; padding: 16px; margin-bottom: 14px; }
+  .sentence-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; font-family: monospace; font-size: 14px; }
+  .tok { padding: 4px 10px; border-radius: 6px; font-weight: 600; }
+  .tok.animal { background: #dbe9fb; color: #1a4f8a; }
+  .tok.fruit { background: #fbdcdc; color: #8a2424; }
+  .tok.verb { background: #d6f3e4; color: #1a6b46; }
+  .tok.connector { background: #e8e8e4; color: #6b6a63; }
+  .gen-btn { background: #1a1a18; color: #f9f9f7; border: none; border-radius: 7px; padding: 7px 16px; font-size: 13px; font-family: inherit; cursor: pointer; margin-bottom: 14px; }
+  .gen-btn:hover { background: #333; }
+  .slot-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; font-family: monospace; font-size: 14px; }
+  .blank-slot { padding: 4px 14px; border: 2px dashed #c3c2b7; border-radius: 6px; color: #898781; }
+  .dist-bars { display: flex; flex-direction: column; gap: 6px; }
+  .dist-bar-row { display: flex; align-items: center; gap: 8px; font-size: 12px; font-family: monospace; }
+  .dist-bar-label { min-width: 60px; color: #3a3a36; }
+  .dist-bar-track { flex: 1; height: 14px; background: #e8e8e4; border-radius: 4px; overflow: hidden; }
+  .dist-bar-fill { height: 100%; border-radius: 4px; transition: width 0.3s; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+  .data-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
+  .data-table th { background: #1a1a18; color: #f9f9f7; padding: 6px 9px; text-align: left; font-weight: 500; }
+  .data-table td { padding: 6px 9px; border-bottom: 0.5px solid #e8e8e4; font-family: monospace; }
+  .data-table tr:nth-child(even) td { background: #f4f4f2; }
+  .check { color: #1baf7a; font-weight: 700; }
+
+  /* memo / generalization section */
+  .insight.warn { background: #fdf1e8; border-color: #f0c89a; }
+  .insight.warn strong { color: #c4711f; }
+  .insight.good { background: #e9f8f0; border-color: #a8e0c2; }
+  .insight.good strong { color: #1baf7a; }
+  .memo-stat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 14px; }
+  @media (max-width: 540px) { .memo-stat-row { grid-template-columns: repeat(2, 1fr); } }
+  .memo-stat { background: #faf6ee; border: 0.5px solid #d8d7cf; border-radius: 9px; padding: 9px 10px; text-align: center; }
+  .memo-stat .stat-label { text-align: center; }
+  .stat-val.train { color: #2a78d6; }
+  .stat-val.test { color: #e34948; }
+  .chart-wrap.memo { height: 320px; }
+  .sq { width: 12px; height: 12px; display: inline-block; }
+  .subtask-block { margin-bottom: 8px; }
+  .subtask-block + .subtask-block {
+    border-top: 1px solid #e0d5c4;
+    margin-top: 28px;
+    padding-top: 28px;
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SECTION 1 — Activations exist for a reason
+     ═══════════════════════════════════════════════════════════ -->
+<section id="s1">
+  <h2>Section 1 — Activations exist for a reason</h2>
+  <p class="section-lead">
+    A neuron computes <code style="font-family:monospace">z = w·x + b</code> — always a straight line.
+    Activation functions bend that line into curves, kinks, and plateaus.
+    Without them, even a "deep" network collapses to a single linear map.
+  </p>
+
+  <h3>1a — A line becomes nonlinear</h3>
+  <p class="section-lead" style="margin-bottom:14px">
+    Drag the sliders. The dashed blue line is the raw linear output; the red curve is what an activation does to it.
+  </p>
+
+  <div class="row">
+    <label>weight (w)</label>
+    <input type="range" min="-20" max="20" value="10" step="1" id="w-sl">
+    <span class="val" id="w-out">1.0</span>
+  </div>
+  <div class="row">
+    <label>bias (b)</label>
+    <input type="range" min="-20" max="20" value="0" step="1" id="b-sl">
+    <span class="val" id="b-out">0.0</span>
+  </div>
+
+  <div class="eq-box" id="eq-box"></div>
+
+  <div class="tabs" id="act-tabs">
+    <button class="tab active" data-act="none">no activation</button>
+    <button class="tab" data-act="relu">ReLU</button>
+    <button class="tab" data-act="sigmoid">sigmoid</button>
+    <button class="tab" data-act="tanh">tanh</button>
+  </div>
+
+  <div class="chart-wrap">
+    <canvas id="cv-act"></canvas>
+  </div>
+  <div class="legend">
+    <span class="leg">
+      <span class="dash" style="background:#2a78d6;border-top:2px dashed #2a78d6"></span>
+      z = w·x + b (always a straight line)
+    </span>
+    <span class="leg" id="act-legend" style="display:none">
+      <span class="dash" style="background:#e34948"></span>
+      <span id="act-legend-label">activation(z)</span>
+    </span>
+  </div>
+
+  <h3>1b — Proof on real data: two interleaved rings</h3>
+  <p class="section-lead" style="margin-bottom:14px">
+  ~300 noisy 2D points form two concentric rings (inner = class 0, outer = class 1).
+  They are <em>not</em> linearly separable — no straight line can split them.
+  Compare two architectures with the <strong>same inputs</strong>; only the activation differs.
+  </p>
+
+  <div class="model-grid" id="model-grid">
+    <div class="model-card active" data-model="linear">
+      <div class="model-title">(a) Linear layer + sigmoid</div>
+      <div class="model-arch">x → [w₁x + w₂y + b] → σ → ŷ</div>
+      <div class="model-acc bad" id="acc-linear">54.7%</div>
+      <div class="model-note">decision boundary = straight line</div>
+    </div>
+    <div class="model-card" data-model="relu">
+      <div class="model-title">(b) One ReLU hidden layer</div>
+      <div class="model-arch">x → [ReLU(Wx+b)] → [w·h + b] → σ → ŷ</div>
+      <div class="model-acc good" id="acc-relu">98.7%</div>
+      <div class="model-note">decision boundary wraps the ring</div>
+    </div>
+  </div>
+
+  <div class="chart-wrap">
+    <canvas id="cv-rings"></canvas>
+  </div>
+  <div class="legend" id="rings-legend">
+    <span class="leg"><span class="dash" style="background:#2a78d6;border-radius:50%;width:10px;height:10px"></span> class 0 (inner ring)</span>
+    <span class="leg"><span class="dash" style="background:#e34948;border-radius:50%;width:10px;height:10px"></span> class 1 (outer ring)</span>
+    <span class="leg" id="boundary-leg"><span class="dash" style="background:#1a1a18;border-top:2px dashed #1a1a18"></span> decision boundary</span>
+  </div>
+
+  <div class="callout" id="rings-callout">
+    <strong>Linear model:</strong> σ(w₁x + w₂y + b) = 0.5 defines a <em>straight line</em> through the plane.
+    The best possible line cuts through both rings, misclassifying roughly half the points → stuck near <strong>~55% accuracy</strong>.
+    Adding more linear layers without activation would change nothing — they still compose into one line.
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SECTION 2 — Depth without nonlinearity is a lie
+     ═══════════════════════════════════════════════════════════ -->
+<section id="s2">
+  <h2>Section 2 — Depth without nonlinearity is a lie</h2>
+  <p class="section-lead">
+    Same total neuron budget (16). Does it matter if they're in one wide layer or stacked deep?
+    Yes — but <em>only</em> because ReLU activations between layers let each layer <strong>compose</strong> what the previous one detected.
+  </p>
+
+  <div class="math-panel">
+    <div class="math-title">the math — addition vs composition</div>
+
+    <p><strong>Shallow (1 layer, n neurons) — values ADD:</strong></p>
+    <code class="math-eq">output(x) = Σᵢ  wᵢ · ReLU(wᵢ·x + bᵢ)
+             = w₁·ReLU(…) + w₂·ReLU(…) + … + wₙ·ReLU(…)</code>
+    <p>Each neuron places one kink at a different position. The output is a <em>sum</em> of independent detectors.
+    Maximum distinct linear regions ≈ <strong>n</strong> (one per neuron).</p>
+
+    <p style="margin-top:14px"><strong>Deep (k layers, n neurons each) — values MULTIPLY in effect:</strong></p>
+    <code class="math-eq">h⁽¹⁾ = ReLU(W⁽¹⁾·x + b⁽¹⁾)          ← layer 1: raw input
+h⁽²⁾ = ReLU(W⁽²⁾·h⁽¹⁾ + b⁽²⁾)        ← layer 2: combinations of layer 1
+h⁽³⁾ = ReLU(W⁽³⁾·h⁽²⁾ + b⁽³⁾)        ← layer 3: combinations of layer 2
+output = w·h⁽ᵏ⁾ + b</code>
+    <p>Layer 2 doesn't see raw <em>x</em> — it sees what layer 1 already found.
+    Each new layer can split regions that previous layers created.
+    Maximum distinct linear regions ≈ <strong>n<sup>k</sup></strong> (exponential in depth).</p>
+
+    <div class="warn">
+      <strong>Without activations:</strong> W⁽³⁾·W⁽²⁾·W⁽¹⁾·x = W<sub>combined</sub>·x — still one straight (or flat) transformation.
+      Depth is a lie without nonlinearity.
+    </div>
+  </div>
+
+  <div class="layer-stack">
+    <div class="layer-row">
+      <span class="layer-badge">Layer 1</span>
+      <span class="layer-desc">Detects simple patterns on raw input — edges, thresholds, kinks at specific x positions</span>
+      <span class="layer-formula">ReLU(w·x + b)</span>
+    </div>
+    <div class="layer-row">
+      <span class="layer-badge">Layer 2</span>
+      <span class="layer-desc">Combines layer-1 patterns — "edge here AND edge there" becomes a feature</span>
+      <span class="layer-formula">ReLU(Σ wᵢ·hᵢ⁽¹⁾)</span>
+    </div>
+    <div class="layer-row">
+      <span class="layer-badge">Layer 3</span>
+      <span class="layer-desc">Combines features into higher-level shapes — bumps, valleys, local curves</span>
+      <span class="layer-formula">ReLU(Σ wᵢ·hᵢ⁽²⁾)</span>
+    </div>
+    <div class="layer-row">
+      <span class="layer-badge">Layer 4</span>
+      <span class="layer-desc">Assembles global structure — full waveforms, complex boundaries</span>
+      <span class="layer-formula">Σ wᵢ·hᵢ⁽³⁾</span>
+    </div>
+  </div>
+
+  <h3>Same 16 neurons — three architectures</h3>
+
+  <div class="arch-grid" id="arch-grid">
+    <div class="arch-card active" data-arch="shallow">
+      <div class="arch-title">Shallow &amp; Wide</div>
+      <div class="arch-sub">1 layer × 16 neurons</div>
+      <div class="arch-diagram">
+        <div class="layer-col" id="d-shallow"></div>
+        <div class="arrow">→</div>
+        <div class="layer-col"><div class="neuron output"></div></div>
+      </div>
+    </div>
+    <div class="arch-card" data-arch="balanced">
+      <div class="arch-title">Balanced</div>
+      <div class="arch-sub">2 layers × 8 neurons</div>
+      <div class="arch-diagram">
+        <div class="layer-col" id="d-balanced-1"></div>
+        <div class="arrow">→</div>
+        <div class="layer-col" id="d-balanced-2"></div>
+        <div class="arrow">→</div>
+        <div class="layer-col"><div class="neuron output"></div></div>
+      </div>
+    </div>
+    <div class="arch-card" data-arch="deep">
+      <div class="arch-title">Deep &amp; Narrow</div>
+      <div class="arch-sub">4 layers × 4 neurons</div>
+      <div class="arch-diagram">
+        <div class="layer-col" id="d-deep-1"></div>
+        <div class="arrow">→</div>
+        <div class="layer-col" id="d-deep-2"></div>
+        <div class="arrow">→</div>
+        <div class="layer-col" id="d-deep-3"></div>
+        <div class="arrow">→</div>
+        <div class="layer-col" id="d-deep-4"></div>
+        <div class="arrow">→</div>
+        <div class="layer-col"><div class="neuron output"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="stat-row">
+    <div class="stat">
+      <div class="stat-label">total neurons</div>
+      <div class="stat-val" id="s-neurons">16</div>
+      <div class="stat-sub">always fixed</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">linear regions</div>
+      <div class="stat-val" id="s-regions">—</div>
+      <div class="stat-sub" id="s-regions-sub"></div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">approx error</div>
+      <div class="stat-val" id="s-error">—</div>
+      <div class="stat-sub">vs sin(2πx)</div>
+    </div>
+  </div>
+
+  <div class="chart-wrap sm">
+    <canvas id="cv-depth"></canvas>
+  </div>
+  <div class="legend">
+    <span class="leg"><span class="dash" style="background:#888;border-top:2px dashed #888"></span> target: sin(2πx)</span>
+    <span class="leg"><span class="dash" style="background:#e34948"></span> network output</span>
+  </div>
+
+  <div class="insight" id="insight-box"></div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SECTION 3 — Embeddings from next-token prediction
+     ═══════════════════════════════════════════════════════════ -->
+<section id="s3">
+  <h2>Section 3 — How embeddings learn similarity from nothing but next-token prediction</h2>
+  <p class="section-lead">
+    Built from a real trained model — 17 tokens, 8-dimensional embeddings, no category labels ever shown.
+  </p>
+
+  <h3><span class="step-tag">1</span>The hidden structure in the training data</h3>
+  <p class="body-text">The sentences were generated from a template. Click to generate a new example — notice <strong>animals</strong> can appear in either slot, but <strong>fruits</strong> only ever appear as the object.</p>
+
+  <div class="card">
+    <div class="sentence-row" id="embed-sentence-display"></div>
+    <button class="gen-btn" id="embed-gen-btn">Generate another sentence</button>
+    <div class="insight">
+      <strong>Key structural fact:</strong> cat, dog, cow, horse, pig are all <em>interchangeable</em> in both slots. The model never sees a rule saying "these are animals" — it only sees that swapping them never breaks the sentence pattern.
+    </div>
+  </div>
+
+  <h3><span class="step-tag">2</span>What "next-token prediction" actually asks</h3>
+  <p class="body-text">At every position, the model is only ever asked one question: <em>given the words so far, what comes next?</em> Pick a context below and see what the model had to predict during training.</p>
+
+  <div class="card">
+    <div class="tabs" id="embed-ctx-tabs">
+      <button class="tab active" data-ctx="the_cat">"the cat ___"</button>
+      <button class="tab" data-ctx="the_dog">"the dog ___"</button>
+      <button class="tab" data-ctx="the_pig">"the pig ___"</button>
+    </div>
+    <div class="slot-row">
+      <span id="embed-ctx-text"></span>
+      <span class="blank-slot">?</span>
+    </div>
+    <div class="dist-bars" id="embed-dist-bars"></div>
+    <div class="insight" id="embed-ctx-insight"></div>
+  </div>
+
+  <h3><span class="step-tag">3</span>Why gradient descent pulls similar words together</h3>
+  <p class="body-text">Because <code style="font-family:monospace;background:#eeeeea;padding:1px 5px;border-radius:4px;font-size:12.5px">cat</code>, <code style="font-family:monospace;background:#eeeeea;padding:1px 5px;border-radius:4px;font-size:12.5px">dog</code>, <code style="font-family:monospace;background:#eeeeea;padding:1px 5px;border-radius:4px;font-size:12.5px">pig</code> all need to produce <em>the same output distribution</em> over next-tokens, the model minimizes loss most easily by giving them <em>similar embedding vectors</em> — so the shared output layer can treat them the same way. This is purely a side-effect of loss minimization.</p>
+
+  <div class="card">
+    <div class="insight">
+      <strong>The mechanism in one line:</strong> if two tokens are followed by the same distribution of next-tokens across the whole dataset, gradient descent has no reason to keep their embeddings apart — and every shared training example nudges them closer.
+    </div>
+  </div>
+
+  <h3><span class="step-tag">4</span>The result: real embeddings from the trained model</h3>
+  <p class="body-text">The actual 8-dimensional embedding table, projected to 2D with PCA. Hover over a point to see its coordinates.</p>
+
+  <div class="card">
+    <div class="legend">
+      <span class="leg"><span class="dot" style="background:#2a78d6"></span>animal</span>
+      <span class="leg"><span class="dot" style="background:#e34948"></span>fruit</span>
+      <span class="leg"><span class="dot" style="background:#1baf7a"></span>verb</span>
+    </div>
+    <div class="chart-wrap">
+      <canvas id="cv-embed"></canvas>
+    </div>
+  </div>
+
+  <h3><span class="step-tag">5</span>Nearest-neighbor proof</h3>
+  <p class="body-text">For each word, its closest neighbor by cosine similarity in the full 8D space (not the 2D projection) — computed directly from the trained embedding table.</p>
+
+  <div class="card">
+    <table class="data-table" id="embed-nn-table"></table>
+  </div>
+</section>
+
+
+<!-- SECTION 4 -->
+<section id="s4">
+  <h2>Section 4 — Memorization vs. generalization, and how data closes the gap</h2>
+  <p class="section-lead">A fixed-capacity model trained on the same noisy classification task at three dataset sizes: 20, 200, 2000 examples.</p>
+
+  <div class="subtask-block">
+    <h3><span class="step-tag">1</span>The task: a noisy, curved decision boundary</h3>
+    <p class="body-text">The true rule is a wavy circular boundary in 2D — points inside are class 1 (blue), outside are class 0 (red). About 8% of labels are randomly flipped to simulate real-world noise. <strong>The model's capacity is fixed across all three runs</strong> — only the amount of training data changes.</p>
+
+    <div class="card">
+      <div class="legend">
+        <span class="leg"><span class="dot" style="background:#2a78d6"></span>class 1 (inside)</span>
+        <span class="leg"><span class="dot" style="background:#e34948"></span>class 0 (outside)</span>
+        <span class="leg"><span class="dot" style="background:#1a1a18;opacity:0.15"></span>region the model predicts class 1</span>
+      </div>
+
+      <div class="tabs" id="memo-size-tabs">
+        <button class="tab active" data-n="20">N = 20</button>
+        <button class="tab" data-n="200">N = 200</button>
+        <button class="tab" data-n="2000">N = 2000</button>
+      </div>
+
+      <div class="memo-stat-row">
+        <div class="memo-stat"><div class="stat-label">train accuracy</div><div class="stat-val train" id="memo-train-acc">—</div></div>
+        <div class="memo-stat"><div class="stat-label">test accuracy</div><div class="stat-val test" id="memo-test-acc">—</div></div>
+        <div class="memo-stat"><div class="stat-label">train loss</div><div class="stat-val train" id="memo-train-loss">—</div></div>
+        <div class="memo-stat"><div class="stat-label">test loss</div><div class="stat-val test" id="memo-test-loss">—</div></div>
+      </div>
+
+      <div class="chart-wrap memo">
+        <canvas id="cv-memo-boundary"></canvas>
+      </div>
+
+      <div class="insight" id="memo-boundary-insight"></div>
+    </div>
+  </div>
+
+  <div class="subtask-block">
+    <h3><span class="step-tag">2</span>Train loss vs. test loss as data grows</h3>
+    <p class="body-text">Same model capacity throughout. Watch how train loss <em>barely changes</em> — it's always low because the model can always fit what it's shown — while test loss falls steadily as the dataset grows.</p>
+
+    <div class="card">
+      <div class="chart-wrap memo">
+        <canvas id="cv-memo-loss"></canvas>
+      </div>
+      <div class="legend">
+        <span class="leg"><span class="sq" style="background:#2a78d6"></span>train loss</span>
+        <span class="leg"><span class="sq" style="background:#e34948"></span>test loss</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="subtask-block">
+    <h3><span class="step-tag">3</span>The generalization gap, directly</h3>
+    <p class="body-text"><code style="font-family:monospace;background:#eeeeea;padding:1px 5px;border-radius:4px;font-size:12.5px">gap = test loss − train loss</code>. This single number captures the whole claim: a large gap means memorization, a small gap means genuine generalization. Hover any point for the exact value.</p>
+
+    <div class="card">
+      <div class="chart-wrap memo">
+        <canvas id="cv-memo-gap"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="subtask-block">
+    <h3><span class="step-tag">4</span>Why this happens</h3>
+    <div class="card">
+      <p class="body-text" style="margin-bottom:12px"><strong>At N=20:</strong> the model has enough flexibility to wrap a tight decision boundary around each individual point — including the noisy, mislabeled ones. It reaches ~100% train accuracy, but the boundary it drew is overfit to specific points rather than the true wavy-circle pattern, so it fails badly on new points.</p>
+      <p class="body-text" style="margin-bottom:12px"><strong>At N=2000:</strong> the same model capacity can no longer afford to wrap tightly around every single point — there are too many of them, and they collectively outline the true pattern. The only boundary that fits most of 2000 points reasonably well <em>is</em> close to the actual wavy circle. Train accuracy even drops slightly (the model can't perfectly memorize noise anymore), but test accuracy rises sharply.</p>
+      <div class="insight">
+        <strong>The core idea:</strong> a fixed-capacity model has a limited "budget" of flexibility. With little data, that budget gets spent contouring around individual noisy points. With lots of data, that same budget can only be spent capturing the shared, repeating pattern — because that's the only thing that reduces loss across so many examples at once.
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<script>
+/* ─────────────────────────────────────────────
+   SECTION 1a — activation function demo
+   ───────────────────────────────────────────── */
+const N1 = 120;
+const xs1 = Array.from({length:N1}, (_,i) => -3 + i*6/(N1-1));
+
+const acts = {
+  none:    z => z,
+  relu:    z => Math.max(0, z),
+  sigmoid: z => 1/(1+Math.exp(-z)),
+  tanh:    z => Math.tanh(z)
+};
+
+const eqStrings = {
+  none:    (w,b) => `z = ${w.toFixed(1)}·x + (${b.toFixed(1)})\noutput = z\n\nNo activation — the output is the raw line.\nChanging w rotates it, changing b shifts it up/down.`,
+  relu:    (w,b) => `z = ${w.toFixed(1)}·x + (${b.toFixed(1)})\noutput = ReLU(z) = max(0, z)\n\nEverything below zero is clamped to 0.\nKink sits at x = -b/w = ${w!==0?(-b/w).toFixed(2):'∞'}`,
+  sigmoid: (w,b) => `z = ${w.toFixed(1)}·x + (${b.toFixed(1)})\noutput = σ(z) = 1 / (1 + e⁻ᶻ)\n\nThe line gets squashed into the range (0, 1).\nw controls steepness of the S-curve.`,
+  tanh:    (w,b) => `z = ${w.toFixed(1)}·x + (${b.toFixed(1)})\noutput = tanh(z)\n\nLike sigmoid but squashed into (−1, 1).\nZero-centered — more useful for hidden layers.`
+};
+
+let currentAct = 'none';
+let chartAct;
+
+function getW(){ return parseInt(document.getElementById('w-sl').value)/10; }
+function getB(){ return parseInt(document.getElementById('b-sl').value)/10; }
+
+function renderAct(){
+  const w = getW(), b = getB();
+  document.getElementById('w-out').textContent = w.toFixed(1);
+  document.getElementById('b-out').textContent = b.toFixed(1);
+  document.getElementById('eq-box').textContent = eqStrings[currentAct](w, b);
+
+  const linearY = xs1.map(x => w*x + b);
+  const actY    = xs1.map(x => acts[currentAct](w*x + b));
+  const showAct = currentAct !== 'none';
+  document.getElementById('act-legend').style.display = showAct ? 'flex' : 'none';
+  document.getElementById('act-legend-label').textContent = currentAct + '(z)';
+
+  const allY = [...linearY, ...actY].filter(isFinite);
+  const pad = 0.6;
+  const yMin = Math.max(Math.min(...allY) - pad, -5);
+  const yMax = Math.min(Math.max(...allY) + pad,  5);
+
+  const datasets = [
+    { label:'z', data:linearY, borderColor:'#2a78d6', borderDash:[5,4], backgroundColor:'transparent', borderWidth:2, pointRadius:0, tension:0 },
+    { label:'zero', data:xs1.map(()=>0), borderColor:'rgba(0,0,0,0.1)', backgroundColor:'transparent', borderWidth:1, pointRadius:0, tension:0 }
+  ];
+  if(showAct){
+    datasets.splice(1, 0, { label:currentAct, data:actY, borderColor:'#e34948', backgroundColor:'transparent', borderWidth:2.5, pointRadius:0, tension:0.15 });
+  }
+
+  if(chartAct){
+    chartAct.data.datasets = datasets;
+    chartAct.options.scales.y.min = yMin;
+    chartAct.options.scales.y.max = yMax;
+    chartAct.update('none');
+  } else {
+    chartAct = new Chart(document.getElementById('cv-act').getContext('2d'), {
+      type:'line',
+      data:{ labels:xs1.map(x=>x.toFixed(1)), datasets },
+      options:{
+        responsive:true, maintainAspectRatio:false, animation:false,
+        plugins:{ legend:{display:false}, tooltip:{enabled:false} },
+        scales:{
+          x:{ ticks:{maxTicksLimit:7,color:'#898781',font:{size:11},callback:(_,i)=>xs1[i]!==undefined?xs1[i].toFixed(1):''},
+              grid:{color:'rgba(0,0,0,0.05)'}, border:{color:'#c3c2b7'},
+              title:{display:true,text:'x  (input)',color:'#898781',font:{size:11}} },
+          y:{ min:yMin, max:yMax,
+              ticks:{color:'#898781',font:{size:11},callback:v=>v.toFixed(1)},
+              grid:{color:'rgba(0,0,0,0.05)'}, border:{color:'#c3c2b7'},
+              title:{display:true,text:'output',color:'#898781',font:{size:11}} }
+        }
+      }
+    });
+  }
+}
+
+document.getElementById('w-sl').addEventListener('input', renderAct);
+document.getElementById('b-sl').addEventListener('input', renderAct);
+document.querySelectorAll('#act-tabs .tab').forEach(btn => {
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('#act-tabs .tab').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    currentAct = btn.dataset.act;
+    renderAct();
+  });
+});
+renderAct();
+
+/* ─────────────────────────────────────────────
+   SECTION 1b — rings classification demo
+   ───────────────────────────────────────────── */
+function seededRandom(seed){
+  let s = seed;
+  return () => { s = (s * 16807 + 0) % 2147483647; return (s - 1) / 2147483646; };
+}
+const rng = seededRandom(42);
+
+function generateRings(nPerRing){
+  const inner = [], outer = [];
+  for(let i = 0; i < nPerRing; i++){
+    const a0 = rng() * 2 * Math.PI;
+    const r0 = 0.55 + (rng() - 0.5) * 0.18;
+    inner.push({ x: r0*Math.cos(a0), y: r0*Math.sin(a0), label: 0 });
+
+    const a1 = rng() * 2 * Math.PI;
+    const r1 = 1.15 + (rng() - 0.5) * 0.22;
+    outer.push({ x: r1*Math.cos(a1), y: r1*Math.sin(a1), label: 1 });
+  }
+  return [...inner, ...outer];
+}
+
+const ringData = generateRings(150);
+const RING_THRESHOLD = 0.85; // simulated "trained" circular boundary
+
+// best straight-line boundary (pre-computed diagonal)
+const LINE_W = { wx: 0.92, wy: -0.38, b: 0.02 };
+
+function linearScore(x, y){
+  return LINE_W.wx*x + LINE_W.wy*y + LINE_W.b;
+}
+function reluScore(x, y){
+  const r2 = x*x + y*y;
+  return r2 - RING_THRESHOLD; // positive → outside circle → class 1 (outer ring)
+}
+
+function computeAccuracy(scoreFn){
+  let correct = 0;
+  ringData.forEach(p => {
+    const pred = scoreFn(p.x, p.y) > 0 ? 1 : 0;
+    if(pred === p.label) correct++;
+  });
+  return (100 * correct / ringData.length).toFixed(1);
+}
+
+const accLinear = computeAccuracy(linearScore);
+const accRelu   = computeAccuracy(reluScore);
+document.getElementById('acc-linear').textContent = accLinear + '%';
+document.getElementById('acc-relu').textContent   = accRelu + '%';
+
+const callouts = {
+  linear: `<strong>Linear model:</strong> σ(w₁x + w₂y + b) = 0.5 defines a <em>straight line</em> through the plane.
+    The best possible line cuts through both rings, misclassifying roughly half the points → stuck near <strong>~${accLinear}% accuracy</strong>.
+    Adding more linear layers without activation would change nothing — they still compose into one line.`,
+  relu: `<strong>ReLU hidden layer:</strong> hidden neurons can fire on different sides of multiple lines, and their combinations carve a <em>curved</em> boundary.
+    A circular decision region (r² ≈ ${RING_THRESHOLD.toFixed(2)}) wraps the inner ring and separates the outer one → <strong>~${accRelu}% accuracy</strong>.
+    <em>Only the activation changed</em> — same data, same neuron count, completely different boundary shape.`
+};
+
+let currentModel = 'linear';
+let chartRings;
+
+function boundaryPoints(model){
+  const pts = [];
+  if(model === 'linear'){
+    // line: wx*x + wy*y + b = 0  →  y = -(wx*x + b)/wy
+    const { wx, wy, b } = LINE_W;
+    for(let x = -1.6; x <= 1.6; x += 0.04){
+      const y = -(wx*x + b) / wy;
+      if(Math.abs(y) <= 1.6) pts.push({ x, y });
+    }
+  } else {
+    const r = Math.sqrt(RING_THRESHOLD);
+    for(let a = 0; a <= 2*Math.PI; a += 0.05){
+      pts.push({ x: r*Math.cos(a), y: r*Math.sin(a) });
+    }
+  }
+  return pts;
+}
+
+function renderRings(){
+  document.getElementById('rings-callout').innerHTML = callouts[currentModel];
+
+  const class0 = ringData.filter(p => p.label === 0);
+  const class1 = ringData.filter(p => p.label === 1);
+  const boundary = boundaryPoints(currentModel);
+
+  const datasets = [
+    {
+      label:'class 0', data:class0,
+      backgroundColor:'rgba(42,120,214,0.75)', borderColor:'#2a78d6',
+      pointRadius:4, pointHoverRadius:4, showLine:false
+    },
+    {
+      label:'class 1', data:class1,
+      backgroundColor:'rgba(227,73,72,0.75)', borderColor:'#e34948',
+      pointRadius:4, pointHoverRadius:4, showLine:false
+    },
+    {
+      label:'boundary', data:boundary,
+      backgroundColor:'transparent', borderColor:'#1a1a18',
+      borderWidth:2, borderDash:[6,4], pointRadius:0,
+      showLine:true, tension: currentModel === 'relu' ? 0.3 : 0
+    }
+  ];
+
+  if(chartRings){
+    chartRings.data.datasets = datasets;
+    chartRings.update('none');
+  } else {
+    chartRings = new Chart(document.getElementById('cv-rings').getContext('2d'), {
+      type:'scatter',
+      data:{ datasets },
+      options:{
+        responsive:true, maintainAspectRatio:false, animation:false,
+        plugins:{ legend:{display:false}, tooltip:{enabled:false} },
+        scales:{
+          x:{ min:-1.7, max:1.7,
+              ticks:{color:'#898781',font:{size:11}},
+              grid:{color:'rgba(0,0,0,0.05)'}, border:{color:'#c3c2b7'},
+              title:{display:true,text:'x₁',color:'#898781',font:{size:11}} },
+          y:{ min:-1.7, max:1.7,
+              ticks:{color:'#898781',font:{size:11}},
+              grid:{color:'rgba(0,0,0,0.05)'}, border:{color:'#c3c2b7'},
+              title:{display:true,text:'x₂',color:'#898781',font:{size:11}} }
+        }
+      }
+    });
+  }
+}
+
+document.querySelectorAll('#model-grid .model-card').forEach(card => {
+  card.addEventListener('click', ()=>{
+    document.querySelectorAll('#model-grid .model-card').forEach(c=>c.classList.remove('active'));
+    card.classList.add('active');
+    currentModel = card.dataset.model;
+    renderRings();
+  });
+});
+renderRings();
+
+/* ─────────────────────────────────────────────
+   SECTION 2 — depth vs breadth
+   ───────────────────────────────────────────── */
+function fillNeurons(id, n){
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.innerHTML = '';
+  const show = Math.min(n, 6);
+  for(let i=0;i<show;i++){
+    const d = document.createElement('div');
+    d.className='neuron';
+    el.appendChild(d);
+  }
+  if(n>6){
+    const d = document.createElement('div');
+    d.style.cssText='font-size:10px;color:#6b6a63;text-align:center';
+    d.textContent=`+${n-6}`;
+    el.appendChild(d);
+  }
+}
+fillNeurons('d-shallow', 16);
+fillNeurons('d-balanced-1', 8);
+fillNeurons('d-balanced-2', 8);
+fillNeurons('d-deep-1', 4);
+fillNeurons('d-deep-2', 4);
+fillNeurons('d-deep-3', 4);
+fillNeurons('d-deep-4', 4);
+
+const relu = z => Math.max(0, z);
+
+function shallowNet(x, n){
+  let out = 0;
+  for(let k=0;k<n;k++){
+    const kinkPos = -1 + k * 2/(n-1||1);
+    const w = 2;
+    const b = -w * kinkPos;
+    const sign = k%2===0?1:-1;
+    const amp = sign * 1.0/n;
+    out += amp * relu(w*x + b);
+  }
+  return out;
+}
+
+function deepNet(x, layers, neuronsPerLayer){
+  let activations = [];
+  for(let k=0;k<neuronsPerLayer;k++){
+    const kinkPos = -1 + k * 2/(neuronsPerLayer-1||1);
+    const w = 2.5;
+    const b = -w * kinkPos;
+    activations.push(relu(w*x + b));
+  }
+  for(let l=1;l<layers;l++){
+    const next = [];
+    for(let k=0;k<neuronsPerLayer;k++){
+      let z = 0;
+      activations.forEach((a, j) => {
+        const w = (k%2===0?1:-1) * 0.8 / neuronsPerLayer * ((j+1)/(neuronsPerLayer));
+        z += w * a;
+      });
+      z += (k%3===0?0.1:-0.1);
+      next.push(relu(z));
+    }
+    activations = next;
+  }
+  return activations.reduce((s,a,i)=> s + (i%2===0?1:-1)*a/neuronsPerLayer, 0);
+}
+
+const archs = {
+  shallow:  { layers:1, npl:16, label:'1 layer × 16 neurons' },
+  balanced: { layers:2, npl:8,  label:'2 layers × 8 neurons' },
+  deep:     { layers:4, npl:4,  label:'4 layers × 4 neurons' }
+};
+
+const insights = {
+  shallow: `<strong>Shallow &amp; Wide:</strong> All 16 neurons see the raw input directly. Each one places a kink at a different point and the output <em>sums</em> them: output = Σ wᵢ·ReLU(…). Good at covering a range of positions, but every neuron works independently — no hierarchy, no composition. Limited to <strong>~16 linear regions</strong> (addition).`,
+  balanced: `<strong>Balanced:</strong> Layer 2 sees a transformed version of the input from layer 1 — not raw x. Layer 2 neurons detect <em>combinations</em> of layer-1 patterns. Composition begins. Theoretically up to <strong>~64 linear regions</strong> (8² = multiply).`,
+  deep: `<strong>Deep &amp; Narrow:</strong> Four layers of composition. Layer 1 → edges/kinks, layer 2 → features, layer 3 → shapes, layer 4 → global structure. Even with only 4 neurons per layer, the network can carve input space into up to <strong>~256 linear regions</strong> (4⁴) — 16× more than the shallow network with the same neuron count.`
+};
+
+const regionCounts = { shallow:'~16', balanced:'~64', deep:'~256' };
+const regionSubs   = { shallow:'n (addition)', balanced:'n² (composition)', deep:'nᵏ (exponential)' };
+
+const N2 = 120;
+const xs2 = Array.from({length:N2}, (_,i) => -1 + i*2/(N2-1));
+const target = xs2.map(x => Math.sin(2*Math.PI*x));
+
+let chartDepth;
+let currentArch = 'shallow';
+
+function computeError(pred, tgt){
+  const mse = pred.reduce((s,v,i)=>s+(v-tgt[i])**2,0)/pred.length;
+  return Math.sqrt(mse);
+}
+
+function renderDepth(){
+  const arch = archs[currentArch];
+  let pred;
+  if(arch.layers===1){
+    pred = xs2.map(x => shallowNet(x, arch.npl));
+  } else {
+    pred = xs2.map(x => deepNet(x, arch.layers, arch.npl));
+  }
+
+  const pMax = Math.max(...pred.map(Math.abs))||1;
+  const tMax = Math.max(...target.map(Math.abs))||1;
+  const normPred = pred.map(v => v/pMax*tMax);
+  const err = computeError(normPred, target);
+
+  document.getElementById('s-regions').textContent = regionCounts[currentArch];
+  document.getElementById('s-regions-sub').textContent = regionSubs[currentArch];
+  document.getElementById('s-error').textContent = err.toFixed(3);
+  document.getElementById('insight-box').innerHTML = insights[currentArch];
+
+  const datasets = [
+    { data:target,   borderColor:'#888', borderDash:[5,4], backgroundColor:'transparent', borderWidth:1.5, pointRadius:0, tension:0.3 },
+    { data:normPred, borderColor:'#e34948', backgroundColor:'transparent', borderWidth:2.5, pointRadius:0, tension:0.2 }
+  ];
+
+  if(chartDepth){
+    chartDepth.data.datasets = datasets;
+    chartDepth.update('none');
+  } else {
+    chartDepth = new Chart(document.getElementById('cv-depth').getContext('2d'), {
+      type:'line',
+      data:{ labels:xs2.map(x=>x.toFixed(2)), datasets },
+      options:{
+        responsive:true, maintainAspectRatio:false, animation:{ duration:300 },
+        plugins:{ legend:{display:false}, tooltip:{enabled:false} },
+        scales:{
+          x:{ ticks:{maxTicksLimit:7,color:'#898781',font:{size:11},callback:(_,i)=>xs2[i]!==undefined?xs2[i].toFixed(1):''},
+              grid:{color:'rgba(0,0,0,0.05)'}, border:{color:'#c3c2b7'} },
+          y:{ min:-1.5, max:1.5,
+              ticks:{color:'#898781',font:{size:11},callback:v=>v.toFixed(1)},
+              grid:{color:'rgba(0,0,0,0.05)'}, border:{color:'#c3c2b7'} }
+        }
+      }
+    });
+  }
+}
+
+document.querySelectorAll('#arch-grid .arch-card').forEach(card => {
+  card.addEventListener('click', ()=>{
+    document.querySelectorAll('#arch-grid .arch-card').forEach(c=>c.classList.remove('active'));
+    card.classList.add('active');
+    currentArch = card.dataset.arch;
+    renderDepth();
+  });
+});
+renderDepth();
+
+/* ─────────────────────────────────────────────
+   SECTION 3 — embeddings
+   ───────────────────────────────────────────── */
+const categoryOf = {"cat":"animal","dog":"animal","cow":"animal","horse":"animal","pig":"animal","apple":"fruit","mango":"fruit","banana":"fruit","grape":"fruit","peach":"fruit","eats":"verb","chases":"verb","sees":"verb","likes":"verb","finds":"verb","the":"connector",".":"connector"};
+const tokenToId = {"cat":0,"dog":1,"cow":2,"horse":3,"pig":4,"apple":5,"mango":6,"banana":7,"grape":8,"peach":9,"eats":10,"chases":11,"sees":12,"likes":13,"finds":14,"the":15,".":16};
+const E = [[0.17727442101449012,-0.6342574034248409,0.8579935378917078,0.5228307144258473,0.6142333874398528,0.10926834535167577,1.155282904683269,0.6784969903252354],[-0.004851155127756559,-0.5918861239579463,0.873027673414694,0.4942398157095913,0.6506168469367546,0.2507414692102257,1.25410997205267,0.6116892153834793],[0.1192836806059871,-0.44892261265775724,0.8551969657800751,0.4527885713621368,0.7206714435446665,0.010673645974551667,1.3166216326038578,0.5925160260016433],[0.016840886798366594,-0.5000381642682377,0.7963740471436094,0.42455706717208613,0.7191073787936253,0.1425745667421017,1.3407677356130405,0.5713999142916671],[0.1212295980590994,-0.522966414593523,0.8126797121183893,0.4875880260855821,0.7502774207853004,0.0795793473981049,1.1261830324318878,0.6959668157853122],[-0.8683484980368893,0.46480655502250906,0.17949903968172082,0.7976364320486901,-0.30473689862380876,-0.12193530631332318,0.3061608393669732,0.6096754335777779],[-0.8147108471315287,0.4189398512112068,0.2667545881032263,0.866484340495855,-0.42845998592036977,-0.12875551548237202,0.22743822424784677,0.5318053968375153],[-0.8544547026887743,0.49532904714487924,0.15805437334819586,0.8125034618860437,-0.41779995956681193,-0.14272665568655107,0.26699325390859535,0.6071352324164574],[-0.87626085227479,0.5252071097116027,0.22299088508857992,0.824001944774013,-0.2174030494798371,-0.12137672246124415,0.17684633369572805,0.5325895139411652],[-0.9382230540321056,0.4426026151261569,0.23229436729920916,0.8206366136597283,-0.32379585744570727,-0.08547762524561316,0.2998330235469091,0.5248546880634573],[-0.5179107947706206,-0.5993868558741541,0.33537722465635245,-0.9263456084477671,-0.29230495227098796,-0.7789996829219982,-0.7935741824489331,-0.31691590665810926],[-0.49517164997371005,-0.46868603828262445,0.42855953306483374,-0.8560365350400064,-0.2060532311648653,-0.8011684386623958,-0.8760117155962459,-0.443923402779214],[-0.6558062430358245,-0.6198728928487584,0.381847707761949,-0.97793777192251,-0.20932646820889955,-0.6740083608552805,-0.7848436420042177,-0.2595331289420979],[-0.6311946914235191,-0.5506064669104516,0.2600274363697568,-0.9284071744828508,-0.08970489145973677,-0.9901119838604424,-0.7127568751043956,-0.3101574444106583],[-0.6149905409226463,-0.677691360744223,0.3618433452474535,-0.9675831548682455,-0.1617441790022931,-0.8342014386525484,-0.622835421275562,-0.36606876953356804],[1.8680035228464784,1.0978447870805754,-2.030865885398403,0.05336063440411957,-0.4772223247687704,1.250576055860514,-0.7432251789847122,-1.2663114687224197],[-0.06397515327497477,-0.0926575941405525,-0.0389809803155768,-0.13766861475563089,0.06351509468144044,-0.02222226970987734,-0.1470806294502658,-0.10155790812075416]];
+
+const animals = ["cat","dog","cow","horse","pig"];
+const fruits  = ["apple","mango","banana","grape","peach"];
+const verbs   = ["eats","chases","sees","likes","finds"];
+const embedCatColor = { animal:"#2a78d6", fruit:"#e34948", verb:"#1baf7a", connector:"#999" };
+
+function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+function renderSentence(){
+  const subj = pick(animals);
+  const verb = pick(verbs);
+  const obj = pick([...animals, ...fruits]);
+  const tokens = [
+    {w:"the", c:"connector"}, {w:subj, c:"animal"}, {w:verb, c:"verb"},
+    {w:"the", c:"connector"}, {w:obj, c:categoryOf[obj]}, {w:".", c:"connector"}
+  ];
+  document.getElementById("embed-sentence-display").innerHTML =
+    tokens.map(t => `<span class="tok ${t.c}">${t.w}</span>`).join("");
+}
+document.getElementById("embed-gen-btn").addEventListener("click", renderSentence);
+renderSentence();
+
+const embedContexts = {
+  the_cat: { text: "the cat" },
+  the_dog: { text: "the dog" },
+  the_pig: { text: "the pig" }
+};
+
+function renderEmbedContext(key){
+  const ctx = embedContexts[key];
+  document.getElementById("embed-ctx-text").textContent = `"${ctx.text}`;
+  const dist = verbs.map(v => ({ tok: v, p: 0.2 }));
+  document.getElementById("embed-dist-bars").innerHTML = dist.map(d => `
+    <div class="dist-bar-row">
+      <span class="dist-bar-label">${d.tok}</span>
+      <div class="dist-bar-track">
+        <div class="dist-bar-fill" style="width:${d.p*100}%; background:${embedCatColor.verb}"></div>
+      </div>
+      <span>${(d.p*100).toFixed(0)}%</span>
+    </div>
+  `).join("");
+  document.getElementById("embed-ctx-insight").innerHTML =
+    `<strong>Notice:</strong> "the cat ___", "the dog ___", and "the pig ___" all expect the <em>exact same</em> distribution over next-tokens (any of the 5 verbs, equally likely). Since the correct output doesn't depend on which animal it was, the model has no incentive to distinguish cat/dog/pig in embedding space — so their vectors drift together.`;
+}
+
+document.querySelectorAll("#embed-ctx-tabs .tab").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll("#embed-ctx-tabs .tab").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    renderEmbedContext(btn.dataset.ctx);
+  });
+});
+renderEmbedContext("the_cat");
+
+function mean(matrix){
+  const n = matrix.length, d = matrix[0].length;
+  const m = new Array(d).fill(0);
+  matrix.forEach(row => row.forEach((v,i) => m[i]+=v));
+  return m.map(v => v/n);
+}
+
+function centerMatrix(matrix, m){
+  return matrix.map(row => row.map((v,i) => v - m[i]));
+}
+
+function powerIteration(cov, dim, numIters=500){
+  let v = new Array(dim).fill(0).map(()=>Math.random());
+  for(let it=0; it<numIters; it++){
+    const newV = cov.map(row => row.reduce((s,c,i)=>s+c*v[i],0));
+    const norm = Math.sqrt(newV.reduce((s,x)=>s+x*x,0));
+    v = newV.map(x=>x/norm);
+  }
+  return v;
+}
+
+function deflate(cov, v){
+  const lambda = v.reduce((s,_,i)=> s + cov[i].reduce((s2,c,j)=>s2+c*v[j],0)*v[i], 0);
+  return cov.map((row,i)=> row.map((val,j)=> val - lambda*v[i]*v[j]));
+}
+
+function computeCov(centered){
+  const n = centered.length, d = centered[0].length;
+  const cov = Array.from({length:d}, ()=>new Array(d).fill(0));
+  centered.forEach(row => {
+    for(let i=0;i<d;i++) for(let j=0;j<d;j++) cov[i][j] += row[i]*row[j];
+  });
+  return cov.map(row => row.map(v => v/(n-1)));
+}
+
+function pca2D(matrix){
+  const m = mean(matrix);
+  const centered = centerMatrix(matrix, m);
+  const cov = computeCov(centered);
+  const v1 = powerIteration(cov, cov.length);
+  const cov2 = deflate(cov, v1);
+  const v2 = powerIteration(cov2, cov2.length);
+  return centered.map(row => [
+    row.reduce((s,x,i)=>s+x*v1[i],0),
+    row.reduce((s,x,i)=>s+x*v2[i],0)
+  ]);
+}
+
+const contentWords = [...animals, ...fruits, ...verbs];
+const contentVecs = contentWords.map(w => E[tokenToId[w]]);
+const embedProj = pca2D(contentVecs);
+const chartData = contentWords.map((w,i) => ({
+  x: embedProj[i][0], y: embedProj[i][1], word: w, cat: categoryOf[w]
+}));
+
+new Chart(document.getElementById("cv-embed").getContext("2d"), {
+  type: "scatter",
+  data: {
+    datasets: ["animal","fruit","verb"].map(cat => ({
+      label: cat,
+      data: chartData.filter(d=>d.cat===cat).map(d=>({x:d.x,y:d.y,word:d.word})),
+      backgroundColor: embedCatColor[cat],
+      borderColor: "#fff",
+      borderWidth: 1.5,
+      pointRadius: 9,
+      pointHoverRadius: 11
+    }))
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: (ctx) => `${ctx.raw.word}  (${ctx.dataset.label})  [${ctx.raw.x.toFixed(2)}, ${ctx.raw.y.toFixed(2)}]`
+        }
+      }
+    },
+    scales: {
+      x: { title:{display:true, text:"PCA dim 1", color:"#898781", font:{size:11}},
+           ticks:{color:"#898781", font:{size:11}}, grid:{color:"rgba(0,0,0,0.05)"}, border:{color:"#c3c2b7"} },
+      y: { title:{display:true, text:"PCA dim 2", color:"#898781", font:{size:11}},
+           ticks:{color:"#898781", font:{size:11}}, grid:{color:"rgba(0,0,0,0.05)"}, border:{color:"#c3c2b7"} }
+    }
+  },
+  plugins: [{
+    id: "embedLabels",
+    afterDatasetsDraw(chart){
+      const {ctx} = chart;
+      chart.data.datasets.forEach((ds, dsIdx) => {
+        const meta = chart.getDatasetMeta(dsIdx);
+        meta.data.forEach((point, i) => {
+          const d = ds.data[i];
+          ctx.save();
+          ctx.font = "11px monospace";
+          ctx.fillStyle = "#1a1a18";
+          ctx.textAlign = "center";
+          ctx.fillText(d.word, point.x, point.y - 14);
+          ctx.restore();
+        });
+      });
+    }
+  }]
+});
+
+function cosineSim(a, b){
+  const dot = a.reduce((s,v,i)=>s+v*b[i], 0);
+  const normA = Math.sqrt(a.reduce((s,v)=>s+v*v,0));
+  const normB = Math.sqrt(b.reduce((s,v)=>s+v*v,0));
+  return dot / (normA*normB + 1e-9);
+}
+
+const nnRows = contentWords.map(w => {
+  const idx = tokenToId[w];
+  let best = null, bestSim = -Infinity;
+  contentWords.forEach(w2 => {
+    if(w2===w) return;
+    const sim = cosineSim(E[idx], E[tokenToId[w2]]);
+    if(sim > bestSim){ bestSim = sim; best = w2; }
+  });
+  const match = categoryOf[best] === categoryOf[w];
+  return {w, cat:categoryOf[w], best, bestCat:categoryOf[best], sim:bestSim, match};
+});
+
+document.getElementById("embed-nn-table").innerHTML = `
+  <thead><tr><th>word</th><th>category</th><th>nearest neighbor</th><th>neighbor category</th><th>cosine sim</th><th></th></tr></thead>
+  <tbody>
+    ${nnRows.map(r => `
+      <tr>
+        <td>${r.w}</td>
+        <td><span style="color:${embedCatColor[r.cat]}">${r.cat}</span></td>
+        <td>${r.best}</td>
+        <td><span style="color:${embedCatColor[r.bestCat]}">${r.bestCat}</span></td>
+        <td>${r.sim.toFixed(3)}</td>
+        <td>${r.match ? '<span class="check">&#10003;</span>' : '&#10007;'}</td>
+      </tr>
+    `).join("")}
+  </tbody>
+`;
+
+/* SECTION 4 — memorization vs generalization */
+
+const MEMO_DATA = {"results":{"20":{"train_pts":[[-0.88,-0.155],[-1.513,0.09],[-0.363,-1.713],[-1.604,1.945],[0.776,-0.205],[0.561,-0.918],[-0.793,-1.707],[-1.79,1.23],[1.253,-1.98],[-0.68,-1.644],[-0.128,0.471],[0.204,-1.464],[0.81,0.452],[-0.13,-0.811],[1.674,-1.666],[-1.421,-0.486],[-0.963,0.465],[0.778,0.816],[1.096,-1.299],[0.985,-1.016]],"train_labels":[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,1,0,0,0],"n_actual":20,"bandwidth":0.2012,"grid_x":[[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0]],"grid_y":[[-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0],[-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9],[-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79],[-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69],[-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59],[-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49],[-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38],[-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28],[-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18],[-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08],[-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97],[-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87],[-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77],[-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67],[-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56],[-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46],[-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36],[-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26],[-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15],[-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05],[0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05],[0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15],[0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26],[0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36],[0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46],[0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56],[0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67],[0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77],[0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87],[0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97],[1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08],[1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18],[1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28],[1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38],[1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49],[1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59],[1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69],[1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79],[1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9],[2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0]],"surface":[[0.5,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.5,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.001,0.002,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.002,0.005,0.009,0.005,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.002,0.004,0.009,0.021,0.031,0.017,0.005,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.002,0.006,0.015,0.035,0.074,0.092,0.044,0.013,0.004,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.004,0.01,0.024,0.056,0.125,0.224,0.217,0.097,0.03,0.009,0.002,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.005,0.014,0.036,0.087,0.19,0.353,0.479,0.386,0.181,0.062,0.019,0.005,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.003,0.012,0.041,0.115,0.261,0.472,0.661,0.704,0.541,0.283,0.109,0.035,0.011,0.003,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.002,0.002,0.001,0.001,0.0,0.0,0.0,0.0,0.001,0.003,0.015,0.07,0.236,0.515,0.75,0.854,0.824,0.652,0.384,0.167,0.059,0.019,0.006,0.002,0.001,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.003,0.012,0.032,0.041,0.021,0.006,0.001,0.0,0.0,0.0,0.002,0.013,0.07,0.282,0.649,0.873,0.926,0.88,0.728,0.474,0.229,0.088,0.03,0.01,0.003,0.001,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.002,0.007,0.029,0.102,0.244,0.163,0.034,0.005,0.001,0.0,0.0,0.002,0.011,0.058,0.256,0.653,0.899,0.949,0.909,0.782,0.549,0.29,0.12,0.043,0.015,0.005,0.002,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.004,0.017,0.064,0.212,0.485,0.495,0.161,0.028,0.004,0.001,0.0,0.001,0.008,0.045,0.213,0.605,0.887,0.949,0.918,0.81,0.602,0.345,0.153,0.058,0.02,0.007,0.002,0.001,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.001,0.003,0.01,0.039,0.137,0.384,0.7,0.8,0.499,0.133,0.022,0.003,0.001,0.001,0.006,0.035,0.172,0.539,0.846,0.912,0.87,0.759,0.574,0.35,0.169,0.069,0.025,0.009,0.003,0.001,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.002,0.006,0.023,0.085,0.267,0.59,0.847,0.932,0.836,0.446,0.108,0.018,0.003,0.001,0.005,0.027,0.136,0.454,0.725,0.732,0.626,0.482,0.333,0.204,0.111,0.053,0.023,0.009,0.004,0.001,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.001,0.003,0.013,0.051,0.175,0.456,0.767,0.928,0.976,0.961,0.809,0.39,0.087,0.014,0.003,0.004,0.021,0.104,0.325,0.421,0.334,0.228,0.146,0.089,0.053,0.03,0.017,0.009,0.005,0.002,0.001,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.002,0.007,0.029,0.106,0.32,0.652,0.881,0.967,0.991,0.991,0.957,0.771,0.336,0.072,0.014,0.007,0.018,0.073,0.147,0.123,0.078,0.047,0.028,0.016,0.009,0.005,0.003,0.002,0.001,0.001,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.001,0.003,0.013,0.052,0.185,0.483,0.793,0.94,0.984,0.996,0.998,0.991,0.947,0.731,0.317,0.111,0.071,0.068,0.065,0.042,0.024,0.014,0.008,0.005,0.003,0.002,0.001,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.001,0.003,0.015,0.064,0.235,0.576,0.856,0.963,0.991,0.998,0.999,0.998,0.99,0.94,0.791,0.666,0.625,0.54,0.24,0.042,0.008,0.003,0.001,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.5],[0.0,0.0,0.0,0.001,0.003,0.012,0.054,0.212,0.558,0.855,0.965,0.992,0.998,1.0,1.0,0.998,0.992,0.982,0.978,0.973,0.932,0.657,0.168,0.021,0.002,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.5],[0.0,0.0,0.0,0.001,0.002,0.01,0.045,0.178,0.5,0.824,0.956,0.99,0.998,1.0,1.0,1.0,0.999,0.999,0.999,0.998,0.989,0.906,0.492,0.088,0.01,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.5],[0.0,0.0,0.0,0.001,0.003,0.014,0.057,0.205,0.527,0.829,0.955,0.99,0.998,0.999,1.0,1.0,1.0,1.0,1.0,1.0,0.997,0.97,0.756,0.231,0.028,0.003,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.002,0.007,0.029,0.108,0.332,0.671,0.894,0.972,0.993,0.998,1.0,1.0,1.0,1.0,1.0,1.0,1.0,0.998,0.982,0.839,0.33,0.044,0.004,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.001,0.004,0.018,0.068,0.228,0.544,0.828,0.951,0.988,0.997,0.999,1.0,1.0,1.0,1.0,1.0,1.0,1.0,0.998,0.984,0.853,0.352,0.049,0.005,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.001,0.003,0.011,0.044,0.157,0.429,0.752,0.924,0.98,0.995,0.999,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,0.998,0.982,0.841,0.335,0.045,0.004,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.001,0.006,0.026,0.103,0.32,0.657,0.886,0.969,0.992,0.998,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,0.998,0.977,0.803,0.282,0.036,0.004,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.001,0.004,0.029,0.147,0.471,0.807,0.948,0.987,0.997,0.999,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,0.996,0.963,0.718,0.2,0.024,0.002,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.001,0.007,0.05,0.285,0.742,0.95,0.991,0.998,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,0.999,0.993,0.93,0.57,0.117,0.013,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.001,0.008,0.061,0.344,0.807,0.971,0.996,0.999,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,0.998,0.984,0.86,0.381,0.058,0.006,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.001,0.009,0.071,0.383,0.834,0.976,0.997,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,0.996,0.964,0.728,0.212,0.026,0.003,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.5],[0.0,0.0,0.0,0.0,0.0,0.001,0.011,0.082,0.421,0.855,0.979,0.997,1.0,1.0,1.0,1.0,1.0,1.0,0.999,0.991,0.919,0.532,0.102,0.011,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.5],[0.0,0.0,0.0,0.0,0.0,0.0,0.002,0.013,0.094,0.456,0.871,0.982,0.998,1.0,1.0,1.0,1.0,1.0,0.998,0.979,0.826,0.323,0.046,0.005,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.5],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.002,0.014,0.102,0.469,0.871,0.98,0.997,1.0,1.0,1.0,0.999,0.995,0.952,0.665,0.166,0.02,0.002,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.5],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.002,0.012,0.075,0.344,0.764,0.953,0.995,1.0,1.0,0.999,0.988,0.892,0.453,0.077,0.008,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.5,0.5],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.004,0.019,0.096,0.375,0.836,0.991,0.999,0.997,0.972,0.775,0.257,0.034,0.004,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.5,0.5],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.003,0.015,0.11,0.728,0.989,0.993,0.935,0.59,0.126,0.014,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.5,0.5,0.5],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.003,0.06,0.5,0.5,0.856,0.375,0.057,0.006,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.5,0.5,0.5,0.5],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.002,0.5,0.5,0.5,0.5,0.025,0.003,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.5,0.5,0.5,0.5,0.5],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.5,0.5,0.5,0.5,0.5,0.5,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.5,0.5,0.5,0.5,0.5,0.5,0.5],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.0,0.0,0.0,0.0,0.0,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5]],"train_acc":1.0,"train_loss":0.0108,"test_acc":0.7933,"test_loss":1.5098,"gap":1.499},"200":{"train_pts":[[0.587,0.656],[-1.88,-1.289],[0.294,0.205],[0.108,-0.503],[-1.757,-0.52],[-0.57,-1.034],[-1.823,1.635],[0.107,-1.546],[-1.435,-0.213],[0.006,1.141],[-1.835,-0.912],[1.399,1.679],[0.247,-0.932],[0.945,-1.862],[0.601,-1.277],[-0.175,0.704],[1.484,1.056],[0.966,0.92],[-0.226,-0.877],[1.393,0.41],[0.561,-1.038],[1.912,1.288],[-0.061,-1.656],[1.973,-1.124],[0.07,1.125],[-1.755,-0.064],[1.569,1.759],[0.706,1.228],[-0.404,-0.311],[1.938,-0.23],[-0.792,0.157],[0.019,1.156],[1.374,-1.504],[-0.837,0.518],[-1.274,0.242],[0.673,-0.681],[-1.535,-0.991],[-0.557,-0.269],[1.189,-1.081],[-1.67,-0.359],[-0.198,1.562],[-1.923,-0.534],[1.432,0.261],[-0.949,0.77],[1.107,-1.621],[1.849,1.889],[-0.366,1.048],[0.332,-1.619],[1.725,1.399],[1.033,-0.375],[-1.025,1.711],[1.048,-1.258],[0.484,-0.186],[-0.839,-1.726],[1.996,-0.01],[0.33,1.507],[1.599,1.544],[-0.317,1.36],[0.825,0.325],[-0.149,0.206],[-1.965,-0.568],[-0.206,-0.201],[1.654,-1.754],[1.604,1.561],[0.746,-0.743],[-0.706,-1.691],[-0.324,-0.102],[1.966,-0.709],[0.655,1.165],[0.362,1.089],[-0.306,-0.708],[1.58,0.746],[1.925,-1.489],[-1.524,1.381],[-0.594,1.759],[-0.932,0.03],[-0.141,-1.58],[1.456,-1.682],[0.381,-0.148],[-1.263,-1.87],[-0.974,1.957],[-1.004,0.657],[-0.081,-0.716],[1.291,-0.492],[-0.561,-1.767],[-1.148,0.642],[-1.769,1.746],[1.115,0.398],[-0.226,-1.325],[1.239,1.476],[-1.753,-0.805],[-0.492,0.146],[0.514,1.876],[1.374,1.371],[-0.53,0.386],[-0.876,1.001],[1.554,-0.604],[-0.256,-1.408],[-1.94,0.488],[-0.358,-0.45],[1.129,1.577],[-0.777,0.045],[0.911,0.268],[1.234,-1.299],[-1.953,-1.943],[-0.185,0.831],[0.886,-0.203],[1.177,-1.255],[1.872,-1.241],[-1.529,-1.916],[1.643,-0.73],[0.096,1.425],[1.289,1.096],[0.961,-0.151],[-1.761,1.119],[-1.889,-1.361],[-0.657,-0.945],[-0.508,0.081],[-1.965,-0.088],[1.882,-0.137],[-0.472,0.872],[0.519,-1.903],[1.008,0.969],[-1.789,1.79],[-0.681,0.546],[1.07,0.498],[-0.552,1.79],[-0.824,-1.829],[-0.369,-1.643],[0.169,1.464],[1.921,-0.267],[-0.788,-1.195],[-1.372,-0.966],[-1.834,-0.737],[-0.833,-0.085],[-1.327,0.619],[0.478,-1.343],[-0.169,-0.805],[0.553,0.628],[-0.821,-1.611],[-0.701,-1.687],[1.382,1.491],[1.595,1.719],[0.653,-1.631],[1.493,0.641],[1.427,0.352],[0.049,0.744],[-1.007,-0.62],[0.785,1.424],[-0.937,1.917],[0.364,1.006],[-0.79,-0.479],[1.38,0.414],[1.048,0.822],[1.608,1.408],[1.242,0.047],[-0.782,0.905],[1.263,1.525],[0.087,0.108],[-1.17,0.257],[0.91,1.811],[1.36,-0.854],[0.201,0.012],[-1.687,0.683],[-1.924,-1.551],[-1.719,0.984],[1.863,0.048],[1.403,0.48],[-0.697,0.172],[1.636,1.132],[0.024,0.378],[0.45,1.178],[0.473,1.639],[0.754,-1.091],[-0.539,-0.82],[-1.511,-1.932],[-1.241,-0.029],[-0.917,1.029],[-1.668,1.759],[-0.634,-0.686],[-0.68,-1.124],[-1.89,-1.588],[0.614,0.28],[-1.041,1.218],[0.481,1.009],[0.527,-0.465],[0.776,-0.611],[0.593,-1.814],[-1.242,0.212],[0.681,0.928],[-0.026,-1.171],[0.741,0.451],[-0.265,1.873],[-0.491,1.76],[0.82,-1.055],[0.623,-1.848],[0.397,1.796],[0.773,0.024],[0.48,-0.899],[1.674,0.524]],"train_labels":[1,0,1,1,0,0,0,0,0,0,0,0,1,0,0,1,0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,1,1,0,1,0,0,0,0,1,0,0,0,0,0,0,0,0,1,0,0,1,0,0,0,1,0,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,1,1,0,0,1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,1,1,0,0,1,1,0,0,0,0,0,0,1,0,1,0,0,0,1,0,0,0,0,0,0,0,1,1,0,0,0,1,0,0,0,1,0,0,1,1,0,0,1,0,0,0,0,1,1,0,1,0,0,0,0,0,0,1,0,1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,1,1,0],"n_actual":200,"bandwidth":0.0636,"grid_x":[[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0]],"grid_y":[[-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0],[-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9],[-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79],[-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69],[-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59],[-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49],[-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38],[-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28],[-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18],[-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08],[-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97],[-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87],[-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77],[-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67],[-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56],[-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46],[-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36],[-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26],[-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15],[-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05],[0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05],[0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15],[0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26],[0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36],[0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46],[0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56],[0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67],[0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77],[0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87],[0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97],[1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08],[1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18],[1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28],[1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38],[1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49],[1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59],[1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69],[1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79],[1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9],[2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0]],"surface":[[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.927,1.0,0.998,0.981,0.829,0.287,0.02,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.5],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.018,0.859,0.984,0.893,0.471,0.077,0.005,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.005,0.326,0.521,0.12,0.014,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.029,0.008,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.5,0.5,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.5,0.5,0.5,0.5,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.039,0.714,0.994,0.949,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.001,0.07,0.824,0.997,1.0,0.002,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.01,0.786,0.089,0.278,0.232,0.059,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.002,0.124,0.897,0.998,1.0,0.436,0.0,0.0,0.0,0.0,0.0,0.0,0.202,0.872,0.079,0.001,0.004,0.803,1.0,0.999,0.997,0.979,0.324,0.002,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.004,0.209,0.942,0.999,1.0,0.996,0.004,0.0,0.0,0.0,0.0,0.002,0.898,0.961,0.846,0.356,0.633,0.999,1.0,1.0,1.0,0.997,0.621,0.006,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.007,0.33,0.968,0.999,1.0,1.0,0.994,0.032,0.014,0.02,0.009,0.004,0.712,0.781,0.491,0.387,0.885,1.0,1.0,1.0,1.0,0.995,0.342,0.027,0.003,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.001,0.461,0.983,1.0,1.0,1.0,1.0,0.99,0.888,0.757,0.254,0.028,0.054,0.222,0.362,0.803,0.974,1.0,1.0,1.0,1.0,0.899,0.466,0.119,0.02,0.003,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.102,0.99,1.0,1.0,1.0,1.0,1.0,0.999,0.991,0.909,0.259,0.001,0.032,0.741,0.975,0.998,1.0,1.0,1.0,0.997,0.955,0.718,0.216,0.025,0.002,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.038,1.0,1.0,1.0,1.0,1.0,1.0,1.0,0.984,0.064,0.0,0.012,0.831,0.998,1.0,1.0,1.0,1.0,1.0,0.989,0.533,0.071,0.006,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.13,1.0,1.0,1.0,1.0,1.0,1.0,0.632,0.011,0.0,0.001,0.081,1.0,1.0,1.0,1.0,1.0,1.0,1.0,0.861,0.024,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.193,1.0,1.0,1.0,1.0,0.999,0.917,0.168,0.006,0.183,0.931,0.999,1.0,1.0,1.0,1.0,1.0,1.0,0.99,0.018,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.246,1.0,1.0,1.0,0.999,0.971,0.411,0.143,0.914,0.999,1.0,1.0,1.0,1.0,1.0,1.0,1.0,0.835,0.001,0.0,0.0,0.0,0.001,0.009,0.003,0.001,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.222,1.0,1.0,1.0,1.0,0.99,0.809,0.947,0.997,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,0.907,0.119,0.005,0.0,0.001,0.587,0.999,1.0,0.997,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.497,0.999,0.998,0.995,0.994,1.0,0.999,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,0.999,0.972,0.468,0.01,0.155,0.996,1.0,1.0,0.978,0.002,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.003,0.018,0.802,0.995,0.9,0.834,0.922,0.999,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,0.985,0.805,0.995,1.0,0.99,0.548,0.965,1.0,1.0,0.96,0.163,0.001,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.001,0.007,0.058,0.327,0.794,0.883,0.299,0.44,0.869,0.997,0.999,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,0.741,0.006,0.244,0.956,1.0,0.999,0.966,0.997,0.926,0.093,0.001,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.001,0.012,0.117,0.549,0.906,0.671,0.08,0.44,0.872,0.623,0.756,0.898,1.0,1.0,1.0,1.0,1.0,1.0,0.999,0.299,0.001,0.045,0.908,1.0,0.989,0.324,0.056,0.034,0.002,0.001,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.002,0.02,0.197,0.723,0.959,0.364,0.011,0.273,0.209,0.008,0.007,0.026,0.993,1.0,1.0,1.0,1.0,1.0,0.995,0.062,0.022,0.4,0.976,0.999,0.811,0.13,0.04,0.054,0.06,0.051,0.027,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.029,0.217,0.116,0.001,0.008,0.289,0.854,0.152,0.004,0.001,0.897,1.0,1.0,1.0,1.0,1.0,0.989,0.932,0.832,0.977,0.999,0.998,0.846,0.625,0.343,0.278,0.357,0.395,0.043,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.015,0.452,0.975,0.912,0.188,0.719,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,0.999,0.984,0.954,0.866,0.681,0.636,0.246,0.011,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.006,0.587,0.987,0.998,0.994,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,0.996,0.345,0.265,0.391,0.531,0.375,0.057,0.005,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.003,0.01,0.186,0.997,1.0,1.0,1.0,1.0,1.0,1.0,1.0,0.948,0.504,0.98,0.97,0.721,0.177,0.0,0.0,0.0,0.0,0.004,0.001,0.0,0.0,0.0,0.0,0.0,0.5],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.006,0.069,0.209,0.268,0.039,0.054,0.993,1.0,1.0,1.0,1.0,0.999,0.996,0.981,0.023,0.0,0.005,0.021,0.002,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.5],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.061,0.675,0.963,0.985,0.877,0.334,0.06,0.984,1.0,1.0,1.0,0.975,0.186,0.015,0.011,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.019,0.32,0.927,0.989,0.869,0.334,0.992,1.0,1.0,0.999,0.095,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.004,0.086,0.726,0.979,0.864,0.99,0.967,0.892,0.698,0.008,0.0,0.0,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.018,0.361,0.74,0.036,0.011,0.003,0.001,0.002,0.037,0.206,0.478,0.198,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.004,0.001,0.0,0.0,0.0,0.0,0.007,0.931,0.881,0.545,0.116,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.529,0.739,0.307,0.03,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.036,0.512,0.137,0.005,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.25,0.046,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.011,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]],"train_acc":0.995,"train_loss":0.0338,"test_acc":0.86,"test_loss":1.1075,"gap":1.0737},"2000":{"train_pts":[[-0.187,1.674],[-1.634,1.03],[-0.977,0.243],[1.893,0.582],[0.456,1.04],[-0.147,-1.798],[-0.532,-1.745],[-0.393,0.506],[-0.236,-0.356],[1.308,-0.242],[-0.146,0.745],[1.463,-0.213],[-1.331,-1.661],[1.353,0.567],[-1.213,-0.142],[-0.347,-0.499],[-0.317,0.146],[-0.943,0.035],[0.236,-1.555],[1.009,-0.182],[0.743,-1.479],[0.04,-1.074],[0.165,-0.924],[0.485,-0.42],[-1.64,1.799],[-1.48,-1.256],[-1.781,-0.006],[1.371,0.719],[-1.393,1.159],[0.163,-0.038],[0.672,1.102],[-1.87,-0.626],[-0.474,-0.019],[-0.925,-1.36],[-0.609,-1.495],[-1.944,1.321],[1.467,0.128],[-1.775,0.533],[-1.104,1.298],[-1.965,0.829],[0.416,1.238],[1.904,-1.483],[1.837,-1.839],[1.146,0.816],[1.945,0.524],[1.486,1.545],[-0.514,-0.343],[-0.655,-1.507],[0.338,-0.548],[1.266,0.958],[-0.611,-0.535],[-0.821,-1.002],[-1.252,1.794],[0.541,1.571],[1.835,-1.594],[-1.714,-1.114],[-1.524,1.9],[1.617,0.999],[0.033,-0.533],[-0.42,0.439],[1.674,-0.822],[1.63,0.622],[0.346,-0.346],[0.995,-0.627],[-0.311,-0.569],[0.736,0.385],[0.886,1.386],[-1.51,-1.983],[-0.161,-1.379],[0.942,-0.905],[0.835,0.708],[-1.945,-0.981],[0.489,1.801],[-1.224,-1.243],[0.829,-1.885],[1.025,-0.198],[0.081,1.103],[-0.634,1.507],[-1.84,0.0],[-0.689,-1.806],[-0.001,-1.453],[0.776,-0.834],[0.309,-0.157],[-0.316,1.229],[0.105,-1.01],[-1.75,-1.154],[-1.375,0.484],[-1.604,1.631],[0.461,-1.138],[-1.422,1.635],[-0.214,1.249],[0.596,0.783],[0.702,1.731],[0.924,1.125],[-0.123,-0.519],[1.374,0.69],[1.954,-0.723],[-1.417,-0.594],[0.047,1.727],[1.097,0.239],[-1.103,-0.995],[-1.592,-1.079],[-1.072,-1.722],[-0.436,1.139],[0.683,-1.628],[0.151,1.196],[1.409,1.929],[0.521,-1.97],[1.16,-0.986],[1.937,0.49],[-0.235,-1.466],[-1.937,0.352],[-1.615,-0.534],[-0.464,1.551],[0.691,-0.853],[-0.27,-1.189],[0.792,-1.901],[1.513,1.278],[-0.546,-1.574],[-1.738,0.133],[-1.313,-1.994],[-0.604,0.59],[0.301,1.823],[1.917,1.06],[-1.679,-0.77],[-1.352,0.493],[-1.28,-0.261],[-1.509,-0.843],[1.726,-0.331],[-0.508,0.508],[-1.546,1.3],[-1.051,0.867],[1.341,0.952],[-1.426,1.763],[1.878,1.164],[1.727,-1.036],[-0.058,-0.143],[0.335,1.707],[-0.474,1.038],[-1.658,0.22],[1.714,-1.748],[-0.342,-1.015],[1.778,-1.529],[-0.898,0.048],[1.76,-0.03],[1.52,1.116],[0.136,-1.052],[0.842,1.552],[-1.5,-1.957],[1.918,-1.588],[-1.856,1.983],[-1.46,-1.644],[-0.524,0.981],[-1.782,0.606],[-0.978,1.295],[0.084,-0.72],[1.388,-0.566],[1.955,-0.038],[1.277,0.042],[1.773,-0.836],[-0.346,-0.488],[-1.864,1.374],[-1.309,-1.463],[-1.063,-1.184],[-1.015,1.571],[0.547,0.926],[-1.119,-1.464],[1.799,1.485],[-1.456,-1.921],[1.495,-1.109],[-0.893,-1.937],[-0.623,0.867],[-1.043,-0.673],[-0.7,1.125],[-1.528,0.246],[1.361,-1.483],[-0.83,-0.068],[1.54,-1.418],[0.419,-0.673],[1.684,0.781],[1.247,-1.904],[0.496,-1.239],[0.646,-1.685],[-1.419,-0.866],[-1.882,0.572],[0.689,-1.426],[1.937,-1.877],[0.541,1.747],[1.015,-1.922],[0.882,0.48],[0.103,1.387],[-1.339,-0.054],[-0.812,0.677],[-0.413,0.791],[-0.339,-0.963],[-0.405,0.885],[-1.42,-0.615],[1.973,-1.823],[0.182,1.269],[1.159,0.766],[-1.365,-1.654],[-0.272,0.91],[-1.533,-1.586],[-1.229,1.235],[-1.065,-1.541],[0.982,-0.937],[-0.689,1.234],[1.012,-0.276],[0.061,0.543],[0.518,1.034],[0.91,0.043],[1.54,0.908],[-0.234,1.033],[0.951,-1.301],[0.083,0.412],[-1.064,-0.187],[-1.382,-1.109],[0.712,-1.369],[-0.094,-1.315],[0.244,1.745],[1.244,1.884],[-0.801,-0.768],[1.452,0.621],[0.345,-0.059],[-0.682,1.408],[1.699,1.044],[-0.888,1.128],[1.718,-0.332],[-0.582,0.616],[-0.769,1.781],[-0.708,-1.494],[-0.829,1.449],[-1.935,1.242],[-0.796,-0.027],[-0.099,1.829],[-0.599,0.472],[-0.4,1.787],[-0.173,1.375],[0.985,1.264],[0.755,0.283],[0.977,1.958],[-0.013,1.275],[-0.966,1.284],[1.85,-0.497],[-1.823,0.081],[1.743,-0.359],[1.852,-1.921],[0.268,-0.725],[-1.206,1.224],[0.74,-0.394],[-1.597,1.193],[-0.064,1.629],[1.504,-1.364],[1.499,0.687],[0.29,-0.839],[0.083,1.845],[-1.801,-1.059],[1.688,1.298],[0.312,0.033],[-0.258,-0.802],[-0.975,-0.17],[-0.289,-1.459],[1.783,1.036],[-1.813,-0.561],[-1.554,0.835],[0.677,1.416],[0.187,0.665],[1.786,1.926],[-1.213,-1.023],[1.251,1.233],[0.785,0.403],[-0.472,1.044],[-0.505,1.893],[1.981,-1.728],[1.151,-1.032],[-0.096,1.77],[-0.742,1.95],[1.003,1.161],[-1.831,0.458],[-0.743,-0.555],[-1.982,1.599],[-0.98,0.56],[-1.672,-1.806],[-1.234,1.853],[-1.62,0.968],[-0.288,1.448],[-1.0,1.961],[-1.151,-0.561],[1.587,1.522],[-1.867,-1.792],[0.297,-1.977],[-0.212,1.631],[0.284,-0.177],[1.696,1.73],[-0.922,0.127],[0.371,-1.88],[-0.605,0.966],[-1.523,-0.439],[0.36,-1.746],[-1.551,0.157],[-1.659,1.802],[0.844,-0.016],[1.076,1.889],[-0.109,-1.523],[0.865,1.658],[0.976,1.723],[-1.458,0.992],[1.805,-0.12],[-1.863,1.309],[-0.833,-1.629],[0.15,0.393],[-1.976,-0.664],[1.47,-1.766],[-0.29,-1.391],[-0.727,-1.99],[1.678,-0.036],[-0.412,0.21],[-1.202,0.746],[0.194,-0.514],[0.415,-1.394],[1.838,-0.812],[0.482,0.421],[1.505,-2.0],[-0.72,0.727],[0.712,0.731],[1.838,1.926],[-1.092,1.874],[0.959,0.892],[-1.617,1.993],[-1.444,-1.168],[-0.705,-1.045],[-1.861,0.962],[1.854,-0.147],[-1.575,-0.931],[-0.569,-0.816],[-0.626,-0.487],[-1.898,0.012],[0.431,1.191],[-0.06,0.551],[-1.341,1.9],[-1.941,-1.928],[0.659,-1.48],[-0.392,1.726],[0.545,0.162],[-0.606,-0.861],[0.937,-0.021],[-0.538,-0.96],[0.059,1.559],[-1.714,0.747],[0.592,1.54],[-1.395,1.89],[1.254,1.351],[-1.903,-1.053],[-1.73,0.903],[1.011,-0.837],[-1.805,0.728],[0.949,-1.899],[1.757,0.275],[0.654,-0.194],[-1.454,1.893],[0.68,-0.602],[-0.28,0.09],[-0.949,-0.564],[-0.263,-0.781],[-1.579,1.169],[0.09,1.033],[0.432,0.723],[-0.611,-0.773],[-0.993,-0.246],[-0.2,-1.064],[-0.334,-1.64],[-0.613,1.168],[-1.919,0.959],[-1.743,0.614],[0.141,-1.752],[-0.717,1.672],[-0.248,-0.774],[-1.713,-1.009],[-1.886,-1.859],[-1.177,1.539],[-1.16,-0.202],[-1.911,-1.806],[0.978,-0.517],[-0.434,0.039],[1.037,0.326],[-0.335,-0.529],[0.115,-1.324],[1.452,-0.726],[-1.226,-0.358],[1.917,-0.568],[0.346,1.322],[-0.837,0.969],[0.108,-1.993],[0.518,-1.924],[-0.967,-0.464],[0.242,-1.661],[-1.081,1.347],[0.966,-0.573],[-1.301,1.677],[1.743,-0.25]],"train_labels":[0,0,0,0,1,0,0,1,1,0,1,0,0,0,0,1,1,1,0,0,0,0,1,1,0,0,1,1,1,1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,1,0,0,0,1,1,0,0,1,1,0,0,1,0,1,1,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0,0,1,0,0,0,0,0,1,1,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0,0,0,1,1,0,1,0,0,0,0,0,1,0,0,1,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1,0,0,1,0,0,0,0,0,0,0,1,0,0,1,0,0,0,1,0,1,0,0,0,0,0,1,0,1,0,0,0,0,1,0,0,0,1,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,1,0,1,0,0,1,1,0,0,0,0,0,0,0,1,0,0,0,1,0,0,1,0,0,0,1,0,1,0,0,0,0,0,1,0,0,0,1,1,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,1,0,0,0,1,0,0,1,0,1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0,1,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,1,0,0,0,0,1,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,1,1,1,0,0,0,0,0,1,0,0,0,0,1,0,0,0,1,0,0,1,0,0,1,1,1,0,0,0,0,0,0,0,0,1,0,0,0,0,0],"n_actual":2000,"bandwidth":0.05,"grid_x":[[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0],[-2.0,-1.9,-1.79,-1.69,-1.59,-1.49,-1.38,-1.28,-1.18,-1.08,-0.97,-0.87,-0.77,-0.67,-0.56,-0.46,-0.36,-0.26,-0.15,-0.05,0.05,0.15,0.26,0.36,0.46,0.56,0.67,0.77,0.87,0.97,1.08,1.18,1.28,1.38,1.49,1.59,1.69,1.79,1.9,2.0]],"grid_y":[[-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0],[-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9,-1.9],[-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79,-1.79],[-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69,-1.69],[-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59,-1.59],[-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49,-1.49],[-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38,-1.38],[-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28,-1.28],[-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18,-1.18],[-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08,-1.08],[-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97,-0.97],[-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87,-0.87],[-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77,-0.77],[-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67,-0.67],[-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56,-0.56],[-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46,-0.46],[-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36,-0.36],[-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26,-0.26],[-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15,-0.15],[-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05,-0.05],[0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05,0.05],[0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15,0.15],[0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26,0.26],[0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36,0.36],[0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46,0.46],[0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56,0.56],[0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67,0.67],[0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77,0.77],[0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87,0.87],[0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97,0.97],[1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08],[1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18,1.18],[1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28,1.28],[1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38,1.38],[1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49,1.49],[1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59,1.59],[1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69,1.69],[1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79,1.79],[1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9,1.9],[2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0]],"surface":[[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.067,0.489,0.914,0.991,0.651,0.004,0.0,0.0,0.002,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.002,0.145,0.806],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.144,0.263,0.005,0.125,0.61,0.78,0.37,0.005,0.0,0.003,0.083,0.051,0.001,0.0,0.002,0.01,0.014,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.009,0.386,0.54],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.008,0.578,0.388,0.007,0.0,0.008,0.112,0.077,0.006,0.0,0.005,0.31,0.167,0.003,0.016,0.2,0.678,0.607,0.02,0.049,0.18,0.001,0.0,0.0,0.001,0.0,0.005,0.105,0.054],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.003,0.239,0.552,0.012,0.0,0.0,0.001,0.001,0.0,0.0,0.0,0.006,0.005,0.0,0.039,0.238,0.373,0.443,0.464,0.824,0.741,0.012,0.0,0.012,0.201,0.113,0.307,0.064,0.001],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.035,0.061,0.103,0.017,0.0,0.0,0.0,0.01,0.002,0.0,0.0,0.0,0.0,0.015,0.063,0.011,0.096,0.266,0.108,0.283,0.18,0.041,0.025,0.399,0.452,0.387,0.189,0.003],[0.0,0.0,0.0,0.003,0.007,0.0,0.0,0.0,0.0,0.002,0.009,0.0,0.0,0.045,0.299,0.111,0.0,0.0,0.007,0.259,0.199,0.001,0.0,0.004,0.005,0.004,0.006,0.0,0.01,0.237,0.184,0.128,0.412,0.332,0.014,0.015,0.007,0.023,0.014,0.0],[0.0,0.0,0.008,0.166,0.119,0.003,0.0,0.0,0.0,0.073,0.159,0.012,0.001,0.103,0.301,0.033,0.0,0.0,0.004,0.34,0.415,0.002,0.001,0.065,0.172,0.12,0.137,0.011,0.013,0.546,0.663,0.012,0.026,0.059,0.002,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.046,0.589,0.263,0.003,0.0,0.0,0.0,0.076,0.188,0.011,0.0,0.007,0.03,0.002,0.0,0.0,0.0,0.007,0.024,0.03,0.072,0.071,0.113,0.067,0.101,0.012,0.001,0.059,0.032,0.0,0.002,0.004,0.121,0.175,0.001,0.0,0.0,0.0],[0.0,0.001,0.071,0.388,0.15,0.001,0.0,0.0,0.0,0.002,0.109,0.069,0.002,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.284,0.44,0.686,0.634,0.439,0.562,0.09,0.001,0.0,0.0,0.0,0.003,0.259,0.336,0.41,0.277,0.079,0.003,0.0,0.0],[0.0,0.001,0.138,0.352,0.027,0.0,0.0,0.0,0.0,0.002,0.2,0.355,0.016,0.0,0.001,0.072,0.03,0.001,0.0,0.009,0.285,0.934,0.977,0.992,0.983,0.994,0.813,0.015,0.0,0.0,0.0,0.003,0.366,0.295,0.174,0.309,0.181,0.003,0.0,0.0],[0.007,0.019,0.238,0.452,0.032,0.0,0.0,0.0,0.0,0.0,0.03,0.086,0.002,0.001,0.017,0.347,0.145,0.004,0.018,0.231,0.669,0.995,1.0,1.0,1.0,1.0,0.866,0.036,0.0,0.0,0.0,0.0,0.024,0.015,0.009,0.017,0.019,0.01,0.001,0.0],[0.623,0.155,0.258,0.072,0.001,0.0,0.0,0.0,0.0,0.0,0.001,0.0,0.0,0.07,0.294,0.687,0.403,0.013,0.146,0.412,0.78,1.0,1.0,1.0,0.997,1.0,0.943,0.225,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.007,0.176,0.268,0.405,0.009],[0.714,0.528,0.165,0.017,0.0,0.0,0.0,0.0,0.001,0.069,0.186,0.013,0.012,0.112,0.278,0.44,0.093,0.034,0.666,0.947,0.998,1.0,1.0,0.975,0.883,0.978,0.502,0.04,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.003,0.039,0.286,0.447,0.038],[0.05,0.17,0.259,0.2,0.001,0.0,0.0,0.003,0.453,0.461,0.496,0.317,0.456,0.275,0.723,0.986,0.922,0.239,0.787,0.994,1.0,1.0,0.999,0.907,0.788,0.96,0.417,0.024,0.001,0.012,0.003,0.001,0.026,0.041,0.0,0.0,0.001,0.067,0.071,0.002],[0.0,0.004,0.025,0.016,0.0,0.0,0.0,0.073,0.757,0.954,0.928,0.817,0.785,0.647,0.739,0.983,1.0,0.991,0.985,1.0,1.0,1.0,1.0,0.993,0.912,0.965,0.414,0.06,0.028,0.185,0.136,0.021,0.186,0.243,0.009,0.04,0.008,0.0,0.019,0.207],[0.0,0.0,0.0,0.0,0.0,0.0,0.003,0.253,0.84,0.993,1.0,0.996,0.988,0.897,0.574,0.942,1.0,1.0,1.0,1.0,1.0,1.0,0.999,0.967,0.93,0.979,0.415,0.048,0.027,0.199,0.057,0.177,0.423,0.351,0.086,0.312,0.047,0.0,0.102,0.912],[0.0,0.0,0.017,0.025,0.0,0.0,0.003,0.22,0.756,0.979,1.0,1.0,0.999,0.963,0.917,0.996,1.0,1.0,1.0,1.0,1.0,1.0,0.965,0.657,0.579,0.802,0.276,0.005,0.0,0.003,0.002,0.086,0.157,0.038,0.053,0.159,0.008,0.0,0.003,0.188],[0.0,0.007,0.411,0.86,0.567,0.005,0.003,0.076,0.527,0.945,1.0,0.984,0.828,0.822,0.735,0.974,1.0,1.0,1.0,1.0,1.0,1.0,0.998,0.919,0.87,0.696,0.286,0.007,0.0,0.0,0.079,0.221,0.004,0.0,0.0,0.0,0.0,0.021,0.031,0.001],[0.046,0.135,0.231,0.681,0.753,0.042,0.008,0.153,0.404,0.974,0.998,0.8,0.51,0.517,0.901,0.992,1.0,0.999,0.997,0.994,0.992,0.999,0.988,0.949,0.976,0.928,0.751,0.58,0.13,0.019,0.084,0.322,0.034,0.001,0.0,0.0,0.01,0.111,0.154,0.012],[0.404,0.409,0.537,0.271,0.374,0.025,0.0,0.013,0.036,0.532,0.955,0.733,0.766,0.985,0.91,0.975,0.998,0.904,0.472,0.76,0.491,0.993,0.774,0.581,0.679,0.766,0.98,0.998,0.902,0.579,0.019,0.23,0.121,0.004,0.0,0.002,0.13,0.218,0.022,0.001],[0.622,0.191,0.205,0.038,0.134,0.031,0.0,0.0,0.0,0.041,0.624,0.735,0.92,0.989,0.669,0.818,0.993,0.794,0.275,0.856,0.865,0.992,0.631,0.462,0.444,0.866,0.993,0.993,0.777,0.646,0.28,0.06,0.019,0.0,0.0,0.005,0.041,0.096,0.003,0.0],[0.982,0.665,0.306,0.018,0.204,0.311,0.004,0.035,0.016,0.007,0.17,0.149,0.088,0.895,0.928,0.981,1.0,0.969,0.515,0.909,0.998,0.989,0.708,0.49,0.659,0.997,1.0,0.997,0.956,0.978,0.846,0.35,0.027,0.015,0.003,0.247,0.269,0.034,0.0,0.001],[0.877,0.276,0.04,0.001,0.025,0.015,0.026,0.419,0.154,0.003,0.056,0.167,0.047,0.297,0.624,0.998,1.0,0.978,0.515,0.935,1.0,0.999,0.982,0.931,0.944,1.0,1.0,0.997,0.785,0.914,0.974,0.848,0.137,0.215,0.049,0.244,0.375,0.016,0.024,0.132],[0.034,0.002,0.0,0.0,0.0,0.0,0.007,0.134,0.025,0.0,0.001,0.005,0.044,0.469,0.832,0.995,1.0,1.0,0.965,0.972,0.997,1.0,0.854,0.54,0.926,1.0,0.995,0.964,0.754,0.784,0.963,0.669,0.178,0.27,0.015,0.013,0.016,0.0,0.058,0.296],[0.0,0.0,0.002,0.003,0.0,0.0,0.014,0.415,0.103,0.0,0.0,0.0,0.02,0.565,0.819,0.874,0.996,1.0,0.914,0.727,0.97,0.995,0.66,0.577,0.912,1.0,0.927,0.709,0.964,0.995,0.906,0.273,0.025,0.008,0.0,0.0,0.003,0.015,0.012,0.058],[0.0,0.003,0.063,0.167,0.003,0.0,0.024,0.402,0.09,0.0,0.0,0.0,0.152,0.973,0.942,0.918,0.996,1.0,0.979,0.941,0.995,0.934,0.272,0.486,0.986,1.0,0.987,0.95,0.992,0.998,0.982,0.578,0.024,0.031,0.002,0.0,0.043,0.195,0.103,0.51],[0.0,0.007,0.095,0.224,0.013,0.0,0.0,0.012,0.001,0.0,0.0,0.0,0.079,0.793,0.996,0.997,1.0,1.0,0.998,1.0,1.0,0.99,0.559,0.071,0.464,0.846,0.711,0.717,0.811,0.649,0.067,0.011,0.248,0.674,0.074,0.002,0.018,0.175,0.057,0.686],[0.001,0.072,0.18,0.328,0.055,0.0,0.0,0.014,0.028,0.045,0.009,0.0,0.033,0.351,0.908,0.746,0.965,0.915,0.841,0.979,0.979,0.852,0.585,0.027,0.008,0.024,0.015,0.108,0.181,0.026,0.0,0.022,0.213,0.409,0.3,0.06,0.0,0.001,0.001,0.033],[0.0,0.043,0.464,0.594,0.018,0.0,0.002,0.127,0.202,0.184,0.049,0.001,0.211,0.687,0.872,0.821,0.974,0.908,0.652,0.953,0.815,0.238,0.283,0.077,0.009,0.0,0.0,0.002,0.009,0.009,0.002,0.198,0.23,0.207,0.088,0.006,0.0,0.0,0.0,0.0],[0.0,0.001,0.207,0.234,0.003,0.0,0.001,0.095,0.063,0.032,0.004,0.0,0.126,0.677,0.973,0.997,0.998,0.85,0.599,0.935,0.237,0.024,0.007,0.029,0.169,0.025,0.0,0.004,0.286,0.244,0.007,0.195,0.308,0.393,0.008,0.0,0.0,0.0,0.0,0.0],[0.001,0.062,0.35,0.008,0.0,0.018,0.134,0.095,0.02,0.0,0.0,0.0,0.001,0.079,0.767,0.999,0.985,0.952,0.727,0.031,0.0,0.0,0.036,0.199,0.297,0.037,0.0,0.002,0.121,0.124,0.003,0.005,0.092,0.175,0.001,0.0,0.0,0.0,0.0,0.0],[0.008,0.253,0.509,0.033,0.003,0.132,0.252,0.126,0.289,0.003,0.002,0.001,0.0,0.0,0.029,0.914,0.653,0.375,0.096,0.0,0.0,0.0,0.053,0.293,0.037,0.004,0.0,0.0,0.007,0.08,0.012,0.0,0.0,0.001,0.0,0.0,0.0,0.0,0.0,0.0],[0.001,0.018,0.043,0.347,0.334,0.397,0.136,0.242,0.231,0.003,0.079,0.086,0.008,0.0,0.002,0.253,0.161,0.004,0.0,0.0,0.0,0.0,0.002,0.005,0.0,0.0,0.0,0.0,0.026,0.374,0.105,0.03,0.0,0.0,0.003,0.027,0.005,0.0,0.0,0.0],[0.0,0.0,0.006,0.394,0.354,0.165,0.047,0.004,0.003,0.002,0.154,0.154,0.006,0.0,0.0,0.001,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.002,0.036,0.275,0.315,0.006,0.0,0.077,0.698,0.15,0.001,0.0,0.0],[0.0,0.0,0.001,0.073,0.075,0.003,0.001,0.0,0.0,0.0,0.05,0.287,0.018,0.057,0.027,0.0,0.0,0.0,0.005,0.011,0.002,0.003,0.004,0.0,0.0,0.0,0.0,0.0,0.0,0.003,0.208,0.328,0.034,0.0,0.009,0.079,0.015,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.145,0.657,0.035,0.438,0.113,0.001,0.0,0.0,0.058,0.311,0.024,0.289,0.317,0.016,0.0,0.0,0.0,0.0,0.0,0.0,0.012,0.011,0.005,0.0,0.0,0.001,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.006,0.089,0.025,0.071,0.06,0.002,0.004,0.0,0.017,0.142,0.013,0.298,0.247,0.008,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.007,0.001,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.002,0.171,0.174,0.02,0.049,0.081,0.212,0.106,0.001,0.002,0.0,0.002,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.009,0.213,0.088,0.001,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.03,0.04,0.012,0.227,0.342,0.38,0.034,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.012,0.18,0.063,0.001,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.04,0.104,0.062,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.011,0.005,0.0,0.0,0.0,0.0,0.0,0.0]],"train_acc":0.9425,"train_loss":0.1293,"test_acc":0.9067,"test_loss":0.4304,"gap":0.3011}},"gap_curve":[{"n":10,"train_loss":0.0201,"test_loss":0.9054,"gap":0.8853},{"n":15,"train_loss":0.0013,"test_loss":2.724,"gap":2.7227},{"n":20,"train_loss":0.0777,"test_loss":1.1549,"gap":1.0772},{"n":30,"train_loss":0.0761,"test_loss":0.8414,"gap":0.7653},{"n":50,"train_loss":0.0036,"test_loss":1.6056,"gap":1.602},{"n":75,"train_loss":0.0493,"test_loss":1.6948,"gap":1.6455},{"n":100,"train_loss":0.063,"test_loss":1.1958,"gap":1.1328},{"n":150,"train_loss":0.0224,"test_loss":1.5449,"gap":1.5225},{"n":200,"train_loss":0.0534,"test_loss":1.1699,"gap":1.1166},{"n":300,"train_loss":0.055,"test_loss":1.1533,"gap":1.0982},{"n":500,"train_loss":0.0478,"test_loss":0.9865,"gap":0.9388},{"n":750,"train_loss":0.0773,"test_loss":0.8192,"gap":0.742},{"n":1000,"train_loss":0.0736,"test_loss":0.6171,"gap":0.5435},{"n":1500,"train_loss":0.0985,"test_loss":0.5239,"gap":0.4254},{"n":2000,"train_loss":0.1345,"test_loss":0.3873,"gap":0.2528},{"n":3000,"train_loss":0.1539,"test_loss":0.4227,"gap":0.2688}],"test_pts":[[1.115,-1.311],[0.854,1.001],[-1.316,1.608],[-1.433,0.445],[1.644,-1.237],[0.23,0.448],[0.052,0.553],[-0.07,-0.845],[-1.835,-1.252],[-0.828,0.915],[-0.022,-1.365],[-0.269,-0.378],[-0.225,0.686],[-0.806,-0.522],[0.262,-1.796],[-0.376,1.009],[1.776,-1.452],[0.293,0.509],[0.843,1.829],[-0.756,-1.316],[0.494,1.392],[1.869,0.095],[-1.612,1.817],[1.266,0.24],[-1.872,1.04],[-1.207,0.875],[0.528,1.445],[-0.357,-0.046],[0.436,1.565],[1.402,-1.294],[0.871,-0.998],[1.444,1.653],[-1.839,-1.741],[-0.339,1.771],[-0.491,-0.327],[0.588,-0.379],[-1.518,-1.694],[-1.422,0.077],[-0.558,1.679],[-1.849,-1.61],[-0.224,1.583],[-0.699,0.689],[-1.085,0.417],[0.063,1.136],[-1.211,-1.479],[0.825,-1.47],[1.11,-0.057],[1.788,-0.973],[-1.799,0.992],[-0.617,-0.145],[-1.268,0.787],[-1.154,0.956],[-1.725,-1.268],[0.11,-1.25],[1.253,1.053],[0.495,0.904],[0.618,0.321],[0.528,-1.534],[-0.189,1.726],[-0.698,-0.354],[0.541,1.7],[-1.752,-0.927],[0.866,-0.125],[-1.953,-0.816],[-0.088,-1.112],[-0.998,1.65],[1.361,0.907],[-1.883,-0.948],[-1.826,-0.514],[-0.306,-1.479],[-1.497,-0.247],[0.599,0.205],[-1.193,-0.302],[-1.034,1.535],[1.097,-1.404],[-1.406,-1.712],[0.473,1.99],[-0.842,-0.533],[-0.758,0.945],[-0.072,0.253],[1.513,-1.088],[-1.007,-0.465],[-1.767,1.529],[1.813,-0.804],[0.991,-0.335],[-0.284,-1.429],[0.762,-1.357],[-0.195,0.678],[1.148,0.7],[1.308,1.048],[0.67,0.173],[0.074,-0.973],[1.558,0.134],[1.093,-1.149],[-0.394,1.163],[0.868,0.585],[-1.56,-1.424],[1.649,1.904],[1.055,0.608],[-0.172,-0.011],[0.837,1.758],[0.539,-0.824],[1.306,1.733],[-0.209,-0.311],[-1.768,-1.458],[-0.388,-1.559],[1.568,0.845],[-1.66,1.583],[0.168,-0.377],[1.815,0.179],[-0.576,0.625],[-1.487,-0.77],[-0.854,-0.77],[-0.63,-0.4],[0.371,-0.987],[1.983,-0.55],[-1.863,-1.972],[-1.08,0.848],[1.72,-0.964],[1.464,-0.246],[-1.616,1.176],[-0.375,-0.345],[-0.008,-0.521],[-1.948,0.88],[0.768,0.039],[-0.098,1.946],[-0.24,-1.026],[1.797,-1.207],[-0.956,0.748],[0.449,0.091],[1.265,1.944],[-1.027,-0.876],[0.188,0.665],[-1.626,-0.306],[-1.262,-0.486],[-1.134,-1.967],[-1.745,-1.599],[0.727,1.761],[-0.609,-0.102],[0.05,0.657],[-0.282,1.272],[-0.269,-1.281],[-0.918,0.23],[-1.565,1.522],[-1.654,-1.499],[-0.487,-1.876],[0.92,0.778],[-0.893,-0.049],[0.825,-0.683],[1.651,1.571],[-0.895,-0.652],[-0.717,-1.152],[1.165,0.845],[-1.139,-0.963],[1.828,-1.454],[1.84,0.996],[1.177,-0.874],[-1.399,1.107],[1.849,-0.722],[0.906,-0.6],[0.07,-1.579],[-1.246,1.156],[1.13,-1.849],[-0.088,0.069],[0.668,0.798],[-0.743,1.458],[-0.748,-0.096],[-1.919,-1.241],[1.927,-1.687],[-0.974,-0.432],[-1.084,0.427],[-0.437,-1.967],[0.219,-0.647],[-1.84,-0.765],[-1.947,0.253],[-1.654,-1.823],[0.705,-1.578],[1.806,-1.149],[0.503,-0.485],[-1.654,0.399],[1.218,-1.532],[-1.678,-1.517],[0.524,1.372],[0.012,1.943],[-0.463,0.259],[0.262,-1.676],[-0.011,-0.836],[-1.727,-0.725],[1.304,-0.827],[1.422,-1.071],[-1.368,-0.526],[-1.868,1.156],[-0.562,-0.754],[0.641,1.735],[-1.521,0.105],[0.557,1.026],[0.383,-1.772],[0.826,-0.925],[0.181,1.446],[0.1,-1.443],[-0.959,-0.032],[-1.766,1.661],[-1.148,-0.589],[0.98,0.098],[1.014,0.837],[-0.938,-1.093],[1.512,-0.91],[-1.679,1.882],[0.737,0.628],[-0.554,-0.246],[-0.118,-0.521],[0.693,-0.905],[-1.351,-1.738],[0.509,-0.668],[0.997,1.742],[-0.491,0.722],[1.791,1.386],[1.972,1.603],[0.5,0.592],[-0.793,1.262],[1.261,1.629],[-1.959,1.82],[-0.758,-1.887],[1.445,-1.292],[-1.863,-0.148],[0.132,-0.298],[-0.236,1.756],[0.749,-1.12],[-1.169,1.456],[0.658,-1.318],[1.835,-0.394],[0.079,0.319],[1.537,-1.542],[-0.661,0.711],[1.185,0.768],[0.748,-1.76],[-1.1,1.05],[-0.138,-1.826],[-0.246,1.755],[-1.752,-0.907],[-0.186,0.185],[-0.497,-0.006],[0.568,-0.948],[-0.095,-1.453],[1.639,0.641],[0.818,-0.537],[-1.712,-0.577],[0.301,-1.66],[1.856,1.177],[1.525,-0.71],[-1.655,1.225],[-1.462,1.099],[0.701,0.283],[-1.814,-0.35],[-0.99,0.262],[-1.08,1.009],[-0.143,0.223],[-0.629,-0.932],[0.401,1.871],[0.209,-1.587],[-1.86,-0.654],[0.812,0.767],[-1.443,-0.575],[-1.247,0.975],[1.311,1.589],[0.725,-1.408],[-1.582,-1.2],[0.325,1.675],[0.242,1.555],[-0.857,-1.365],[-0.535,-0.022],[0.456,-0.588],[-1.68,1.205],[0.209,1.447],[-0.433,-0.777],[1.168,1.394],[-1.253,-1.028],[-1.658,0.348],[1.974,-0.06],[1.007,-1.424],[-1.482,-1.671],[-0.993,-0.616],[0.765,0.919],[-1.092,-0.137],[-0.038,0.956],[-0.195,0.846],[-0.784,-0.141],[-1.756,-1.17],[1.648,-0.945],[1.953,-1.389],[0.522,-0.816],[0.283,0.508],[1.485,-0.259],[0.435,1.589],[-1.231,-0.794],[-0.251,-1.558],[-0.678,-1.294],[0.381,-0.122],[0.428,-1.608],[-1.623,1.638]],"test_labels":[0,1,0,0,0,1,1,1,0,0,0,1,1,1,0,1,0,1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,1,1,0,0,0,0,0,1,0,0,0,0,1,1,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,1,0,1,0,1,0,0,0,0,0,1,0,0,1,1,0,0,1,1,0,0,1,1,1,1,0,1,0,0,0,0,1,0,1,0,0,1,1,0,0,0,0,1,0,1,1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,1,1,0,0,0,0,0,0,1,1,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,1,0,0,1,0,0,1,0,1,1,0,0,0,0,0,1,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,1,0,0,0,0,1,1,1,1,0,1,0,1,1,0,1,0,1,0,0,1,0,1,0,0,0,0,0,1,0,0,0,1,0,0,0,0,1,1,1,0,1,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,1,0,0,1,0,1,1,1,1,0,0,0,1,1,0,0,0,0,0,1,0,0]};
+
+const catColorPt = { 1: "#2a78d6", 0: "#e34948" };
+
+let memoBoundaryChart;
+let currentN = "20";
+
+function renderMemoBoundary(n) {
+  const r = MEMO_DATA.results[n];
+
+  document.getElementById("memo-train-acc").textContent = (r.train_acc*100).toFixed(1) + "%";
+  document.getElementById("memo-test-acc").textContent = (r.test_acc*100).toFixed(1) + "%";
+  document.getElementById("memo-train-loss").textContent = r.train_loss.toFixed(3);
+  document.getElementById("memo-test-loss").textContent = r.test_loss.toFixed(3);
+
+  // build background heatmap points (decision surface) as a scatter with small squares
+  const bgPoints = [];
+  const gx = r.grid_x, gy = r.grid_y, surf = r.surface;
+  for (let i = 0; i < gx.length; i++) {
+    for (let j = 0; j < gx[i].length; j++) {
+      const p = surf[i][j];
+      bgPoints.push({ x: gx[i][j], y: gy[i][j], p: p });
+    }
+  }
+
+  const trainPoints1 = [], trainPoints0 = [];
+  r.train_pts.forEach((pt, i) => {
+    if (r.train_labels[i] === 1) trainPoints1.push({x: pt[0], y: pt[1]});
+    else trainPoints0.push({x: pt[0], y: pt[1]});
+  });
+
+  const datasets = [
+    {
+      label: "decision surface",
+      data: bgPoints,
+      backgroundColor: bgPoints.map(p => `rgba(26,26,24,${Math.abs(p.p-0.5)*0.5})`),
+      pointRadius: 9,
+      pointStyle: "rect",
+      order: 3
+    },
+    {
+      label: "class 1 (train)",
+      data: trainPoints1,
+      backgroundColor: "#2a78d6",
+      borderColor: "#fff",
+      borderWidth: 1,
+      pointRadius: n === "20" ? 6 : (n === "200" ? 4 : 3),
+      order: 1
+    },
+    {
+      label: "class 0 (train)",
+      data: trainPoints0,
+      backgroundColor: "#e34948",
+      borderColor: "#fff",
+      borderWidth: 1,
+      pointRadius: n === "20" ? 6 : (n === "200" ? 4 : 3),
+      order: 1
+    }
+  ];
+
+  if (memoBoundaryChart) {
+    memoBoundaryChart.data.datasets = datasets;
+    memoBoundaryChart.update("none");
+  } else {
+    const ctx = document.getElementById("cv-memo-boundary").getContext("2d");
+    memoBoundaryChart = new Chart(ctx, {
+      type: "scatter",
+      data: { datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        plugins: { legend: { display: false }, tooltip: { enabled: false } },
+        scales: {
+          x: { min: -2, max: 2, ticks: { color: "#898781", font: {size:11} }, grid: { color: "rgba(0,0,0,0.04)" }, border: { color: "#c3c2b7" } },
+          y: { min: -2, max: 2, ticks: { color: "#898781", font: {size:11} }, grid: { color: "rgba(0,0,0,0.04)" }, border: { color: "#c3c2b7" } }
+        }
+      }
+    });
+  }
+
+  const insightEl = document.getElementById("memo-boundary-insight");
+  if (n === "20") {
+    insightEl.className = "insight warn";
+    insightEl.innerHTML = "<strong>Memorization:</strong> with only 20 points, the model's decision surface forms tight, jagged pockets around individual points &mdash; including noisy mislabeled ones. Train accuracy is ~100% but test accuracy is much lower.";
+  } else if (n === "200") {
+    insightEl.className = "insight";
+    insightEl.innerHTML = "<strong>Transitioning:</strong> with 200 points, the boundary starts looking more like a coherent shape, but still has rough, overfit edges chasing individual noisy points.";
+  } else {
+    insightEl.className = "insight good";
+    insightEl.innerHTML = "<strong>Generalization:</strong> with 2000 points, the decision surface smooths into something close to the true wavy-circle pattern. The model can no longer afford to chase every noisy point &mdash; the only boundary that works across this many points is the real one.";
+  }
+}
+
+document.querySelectorAll("#memo-size-tabs .tab").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll("#memo-size-tabs .tab").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    currentN = btn.dataset.n;
+    renderMemoBoundary(currentN);
+  });
+});
+
+renderMemoBoundary("20");
+
+// Loss chart (3 dataset sizes, bar-style comparison)
+const lossCtx = document.getElementById("cv-memo-loss").getContext("2d");
+const sizesOrdered = ["20", "200", "2000"];
+new Chart(lossCtx, {
+  type: "bar",
+  data: {
+    labels: sizesOrdered.map(n => "N = " + n),
+    datasets: [
+      {
+        label: "train loss",
+        data: sizesOrdered.map(n => MEMO_DATA.results[n].train_loss),
+        backgroundColor: "#2a78d6"
+      },
+      {
+        label: "test loss",
+        data: sizesOrdered.map(n => MEMO_DATA.results[n].test_loss),
+        backgroundColor: "#e34948"
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { ticks: { color: "#898781", font: {size:12} }, grid: { display: false }, border: { color: "#c3c2b7" } },
+      y: { ticks: { color: "#898781", font: {size:11} }, grid: { color: "rgba(0,0,0,0.05)" }, border: { color: "#c3c2b7" }, title: { display: true, text: "loss", color: "#898781", font: {size:11} } }
+    }
+  }
+});
+
+// Gap curve (fine-grained line chart over many N)
+const gapCtx = document.getElementById("cv-memo-gap").getContext("2d");
+const fineN = MEMO_DATA.gap_curve.map(d => d.n);
+new Chart(gapCtx, {
+  type: "line",
+  data: {
+    labels: fineN,
+    datasets: [
+      {
+        label: "generalization gap",
+        data: MEMO_DATA.gap_curve.map(d => d.gap),
+        borderColor: "#c4711f",
+        backgroundColor: "rgba(196,113,31,0.08)",
+        fill: true,
+        borderWidth: 2.5,
+        pointRadius: 3,
+        pointBackgroundColor: "#c4711f",
+        tension: 0.25
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: (ctx) => `N=${ctx.label}  gap=${ctx.raw.toFixed(3)}`
+        }
+      }
+    },
+    scales: {
+      x: { type: "logarithmic", title: { display: true, text: "training set size (log scale)", color: "#898781", font: {size:11} },
+            ticks: { color: "#898781", font: {size:10}, callback: (v) => {
+                const allowed = [10,20,50,100,200,500,1000,2000,3000];
+                return allowed.includes(v) ? v : "";
+            } }, grid: { color: "rgba(0,0,0,0.04)" }, border: { color: "#c3c2b7" } },
+      y: { title: { display: true, text: "test loss \u2212 train loss", color: "#898781", font: {size:11} },
+            ticks: { color: "#898781", font: {size:11} }, grid: { color: "rgba(0,0,0,0.05)" }, border: { color: "#c3c2b7" } }
+    }
+  }
+});
+
+</script>
+</body>
+</html>
