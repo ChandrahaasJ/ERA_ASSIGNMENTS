@@ -120,138 +120,45 @@
       "#d1ecf1",
     ];
 
-    const TELUGU_CONSONANTS = new Set(
-      Array.from({ length: 0x0C3A - 0x0C15 }, (_, i) => String.fromCharCode(0x0C15 + i))
-    );
-    const TELUGU_VOWELS = new Set(
-      Array.from({ length: 0x0C15 - 0x0C05 }, (_, i) => String.fromCharCode(0x0C05 + i))
-    );
-    const TELUGU_VIRAMA = "\u0C4D";
-    const TELUGU_MATRAS = new Set(
-      [...Array.from({ length: 0x0C4D - 0x0C3E }, (_, i) => String.fromCharCode(0x0C3E + i)), "\u0C55", "\u0C56"]
-    );
-    const TELUGU_ANUSVARA = "\u0C02";
-
-    const DEVANAGARI_CONSONANTS = new Set([
-      ...Array.from({ length: 0x093A - 0x0915 }, (_, i) => String.fromCharCode(0x0915 + i)),
-      ...Array.from({ length: 0x0960 - 0x0958 }, (_, i) => String.fromCharCode(0x0958 + i)),
-    ]);
-    const DEVANAGARI_VOWELS = new Set(
-      Array.from({ length: 0x0914 - 0x0905 }, (_, i) => String.fromCharCode(0x0905 + i))
-    );
-    const DEVANAGARI_VIRAMA = "\u094D";
-    const DEVANAGARI_MATRAS = new Set(
-      Array.from({ length: 0x094F - 0x093E }, (_, i) => String.fromCharCode(0x093E + i))
-    );
-    const DEVANAGARI_CHANDRABINDHU = "\u0901";
-    const DEVANAGARI_ANUSVARA = "\u0902";
-    const DEVANAGARI_VISARGA = "\u0903";
-    const DEVANAGARI_NUKTA = "\u093C";
+    // GPT-2 pre-tokenizer (matches tokenizer_v2.py GPT2_PATTERN).
+    const GPT2_PATTERN =
+      /'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+/gu;
 
     let tokenizer = null;
 
-    function containsTelugu(text) {
-      return [...text].some((ch) => {
-        const code = ch.charCodeAt(0);
-        return code >= 0x0C00 && code <= 0x0C7F;
+    function pairKey(left, right) {
+      return left + "\0" + right;
+    }
+
+    function buildRanks(merges) {
+      const ranks = new Map();
+      merges.forEach(([left, right], index) => {
+        ranks.set(pairKey(left, right), index);
       });
+      return ranks;
     }
 
-    function containsDevanagari(text) {
-      return [...text].some((ch) => {
-        const code = ch.charCodeAt(0);
-        return code >= 0x0900 && code <= 0x097F;
-      });
-    }
-
-    function splitCharwiseWord(word) {
-      return [...word];
-    }
-
-    function splitMathrawiseWord(word, script) {
-      if (!word) return [];
-
-      const isConsonant = script === "te"
-        ? (ch) => TELUGU_CONSONANTS.has(ch)
-        : (ch) => DEVANAGARI_CONSONANTS.has(ch);
-      const isVowel = script === "te"
-        ? (ch) => TELUGU_VOWELS.has(ch)
-        : (ch) => DEVANAGARI_VOWELS.has(ch);
-      const virama = script === "te" ? TELUGU_VIRAMA : DEVANAGARI_VIRAMA;
-      const matras = script === "te" ? TELUGU_MATRAS : DEVANAGARI_MATRAS;
-      const chandrabindhu = script === "te"
-        ? new Set([TELUGU_ANUSVARA])
-        : new Set([DEVANAGARI_CHANDRABINDHU, DEVANAGARI_ANUSVARA, DEVANAGARI_VISARGA]);
-
-      const clusters = [];
-      let i = 0;
-      while (i < word.length) {
-        let cluster = word[i];
-        i += 1;
-
-        if (isConsonant(cluster) || isVowel(cluster)) {
-          while (i < word.length && word[i] === virama) {
-            if (i + 1 < word.length && isConsonant(word[i + 1])) {
-              cluster += word[i] + word[i + 1];
-              i += 2;
-            } else {
-              cluster += word[i];
-              i += 1;
-            }
-          }
-
-          while (i < word.length && (matras.has(word[i]) || chandrabindhu.has(word[i]))) {
-            cluster += word[i];
-            i += 1;
-          }
-
-          if (script === "hi" && i < word.length && word[i] === DEVANAGARI_NUKTA) {
-            cluster += word[i];
-            i += 1;
-          }
-        }
-
-        clusters.push(cluster);
-      }
-
-      return clusters;
-    }
-
-    function splitWord(word, splitMode) {
-      if (containsTelugu(word)) {
-        return splitMode === "mathrawise"
-          ? splitMathrawiseWord(word, "te")
-          : splitCharwiseWord(word);
-      }
-      if (containsDevanagari(word)) {
-        return splitMode === "mathrawise"
-          ? splitMathrawiseWord(word, "hi")
-          : splitCharwiseWord(word);
-      }
-      return splitCharwiseWord(word);
-    }
-
-    function splitLine(text, splitMode) {
-      const tokens = [];
-      const parts = text.split(/(\s+)/);
-      for (const part of parts) {
-        if (!part) continue;
-        if (/^\s+$/.test(part)) {
-          tokens.push(...[...part]);
-        } else {
-          tokens.push(...splitWord(part, splitMode));
+    function pretokenize(text) {
+      const normalized = text.normalize("NFC");
+      const sequences = [];
+      GPT2_PATTERN.lastIndex = 0;
+      let match;
+      while ((match = GPT2_PATTERN.exec(normalized)) !== null) {
+        const chunk = match[0];
+        if (chunk) {
+          sequences.push([...chunk]);
         }
       }
-      return tokens;
+      return sequences;
     }
 
     function mergePair(tokens, pair) {
-      const [a, b] = pair;
-      const merged = a + b;
+      const [left, right] = pair;
+      const merged = left + right;
       const result = [];
       let i = 0;
       while (i < tokens.length) {
-        if (i < tokens.length - 1 && tokens[i] === a && tokens[i + 1] === b) {
+        if (i < tokens.length - 1 && tokens[i] === left && tokens[i + 1] === right) {
           result.push(merged);
           i += 2;
         } else {
@@ -262,12 +169,38 @@
       return result;
     }
 
+    function applyBpeMerges(tokens, ranks) {
+      if (tokens.length < 2 || ranks.size === 0) {
+        return tokens;
+      }
+
+      while (true) {
+        let bestPair = null;
+        let bestRank = Infinity;
+        for (let i = 0; i < tokens.length - 1; i += 1) {
+          const rank = ranks.get(pairKey(tokens[i], tokens[i + 1]));
+          if (rank !== undefined && rank < bestRank) {
+            bestRank = rank;
+            bestPair = [tokens[i], tokens[i + 1]];
+          }
+        }
+        if (bestPair === null) {
+          break;
+        }
+        tokens = mergePair(tokens, bestPair);
+        if (tokens.length < 2) {
+          break;
+        }
+      }
+      return tokens;
+    }
+
     function encode(text, data) {
       if (!text) return [];
 
-      let tokens = splitLine(text, data.split_mode || "mathrawise");
-      for (const pair of data.merges || []) {
-        tokens = mergePair(tokens, pair);
+      const tokens = [];
+      for (const sequence of pretokenize(text)) {
+        tokens.push(...applyBpeMerges(sequence, data.ranks));
       }
       return tokens;
     }
@@ -276,7 +209,7 @@
       if (data.token_to_id && Object.prototype.hasOwnProperty.call(data.token_to_id, token)) {
         return data.token_to_id[token];
       }
-      return -1;
+      return data.token_to_id?.["<unk>"] ?? -1;
     }
 
     function render() {
@@ -312,6 +245,7 @@
           throw new Error(`Failed to load tokenizer.json (${response.status})`);
         }
         tokenizer = await response.json();
+        tokenizer.ranks = buildRanks(tokenizer.merges || []);
         statusEl.textContent = "";
         statusEl.style.display = "none";
 
