@@ -8,6 +8,7 @@ from collections import Counter
 from pathlib import Path
 
 import regex as re
+from tqdm import tqdm
 
 # GPT-2 style pre-tokenizer pattern (requires the `regex` package for \p{L}/\p{N}).
 GPT2_PATTERN = re.compile(
@@ -95,6 +96,7 @@ def _build_token_counts(corpus: list[list[str]]) -> dict[str, int]:
 def _train_bpe(
     corpus: list[list[str]],
     vocab_size: int,
+    desc: str = "BPE merges",
 ) -> tuple[dict[str, int], list[tuple[str, str]]]:
     """
     Train BPE and build a token -> ID vocabulary.
@@ -118,16 +120,20 @@ def _train_bpe(
         vocab[token] = len(vocab)
 
     merges: list[tuple[str, str]] = []
-    while len(vocab) < vocab_size:
-        pair_counts = _get_pair_counts(corpus)
-        if not pair_counts:
-            break
-        best_pair = pair_counts.most_common(1)[0][0]
-        corpus = _merge_pair(corpus, best_pair)
-        merges.append(best_pair)
-        merged_token = best_pair[0] + best_pair[1]
-        if merged_token not in vocab:
-            vocab[merged_token] = len(vocab)
+    remaining = vocab_size - len(vocab)
+    with tqdm(total=remaining, desc=desc, unit="merge", leave=True) as pbar:
+        while len(vocab) < vocab_size:
+            pair_counts = _get_pair_counts(corpus)
+            if not pair_counts:
+                break
+            best_pair = pair_counts.most_common(1)[0][0]
+            corpus = _merge_pair(corpus, best_pair)
+            merges.append(best_pair)
+            merged_token = best_pair[0] + best_pair[1]
+            if merged_token not in vocab:
+                vocab[merged_token] = len(vocab)
+                pbar.update(1)
+            pbar.set_postfix(vocab=len(vocab), refresh=False)
 
     return vocab, merges
 
@@ -229,7 +235,11 @@ class Tokenizer:
         for line in lines:
             corpus.extend(_pretokenize(line, form))
 
-        vocab, merges = _train_bpe(corpus, vocab_size=self.vocab_size)
+        vocab, merges = _train_bpe(
+            corpus,
+            vocab_size=self.vocab_size,
+            desc=f"Training {form} tokenizer",
+        )
         return self._write_artifacts(form, vocab, merges)
 
     def generate_tokens_nfc(self, text: str) -> Path:
