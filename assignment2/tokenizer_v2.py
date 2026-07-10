@@ -15,18 +15,6 @@ GPT2_PATTERN = re.compile(
 )
 
 UNK_TOKEN = "<unk>"
-# GPT-2-style visible marker so merges.txt can stay space-separated even when
-# a token itself contains a literal space (common with the GPT-2 regex).
-_SPACE_MARKER = "\u0120"  # Ġ
-
-
-def _encode_merge_token(token: str) -> str:
-    return token.replace(" ", _SPACE_MARKER)
-
-
-def _decode_merge_token(token: str) -> str:
-    return token.replace(_SPACE_MARKER, " ")
-
 
 # Sample multilingual corpus (same lines as tokenizer.py) for demos / smoke tests.
 TELUGU_LINES = [
@@ -188,12 +176,8 @@ class Tokenizer:
         self._merges: dict[str, list[tuple[str, str]]] = {}
         self._ranks: dict[str, dict[tuple[str, str], int]] = {}
 
-    def _artifact_paths(self, form: str) -> tuple[Path, Path]:
-        key = form.lower()
-        return (
-            self.output_dir / f"vocab_{key}.json",
-            self.output_dir / f"merges_{key}.txt",
-        )
+    def _artifact_path(self, form: str) -> Path:
+        return self.output_dir / f"tokenizer_{form.lower()}.json"
 
     def _write_artifacts(
         self,
@@ -201,51 +185,38 @@ class Tokenizer:
         vocab: dict[str, int],
         merges: list[tuple[str, str]],
     ) -> Path:
-        vocab_path, merges_path = self._artifact_paths(form)
-        with vocab_path.open("w", encoding="utf-8") as fh:
-            json.dump(vocab, fh, ensure_ascii=False, indent=2)
+        path = self._artifact_path(form)
+        payload = {
+            "merges": [list(pair) for pair in merges],
+            "token_to_id": vocab,
+        }
+        with path.open("w", encoding="utf-8") as fh:
+            json.dump(payload, fh, ensure_ascii=False, indent=2)
             fh.write("\n")
-        with merges_path.open("w", encoding="utf-8") as fh:
-            for left, right in merges:
-                fh.write(
-                    f"{_encode_merge_token(left)} {_encode_merge_token(right)}\n"
-                )
 
         key = form.lower()
         self._vocab[key] = vocab
         self._merges[key] = merges
         self._ranks[key] = {pair: i for i, pair in enumerate(merges)}
-        return vocab_path
+        return path
 
     def _load_artifacts(self, form: str) -> None:
         key = form.lower()
         if key in self._vocab and key in self._ranks:
             return
 
-        vocab_path, merges_path = self._artifact_paths(form)
-        if not vocab_path.exists() or not merges_path.exists():
+        path = self._artifact_path(form)
+        if not path.exists():
             raise FileNotFoundError(
-                f"Missing artifacts for {form}: expected {vocab_path} and {merges_path}. "
+                f"Missing artifacts for {form}: expected {path}. "
                 f"Call generate_tokens_{key}() first."
             )
 
-        with vocab_path.open(encoding="utf-8") as fh:
-            vocab = json.load(fh)
+        with path.open(encoding="utf-8") as fh:
+            data = json.load(fh)
 
-        merges: list[tuple[str, str]] = []
-        with merges_path.open(encoding="utf-8") as fh:
-            for line_no, line in enumerate(fh, start=1):
-                line = line.rstrip("\n")
-                if not line or line.startswith("#"):
-                    continue
-                parts = line.split(" ")
-                if len(parts) != 2:
-                    raise ValueError(
-                        f"Invalid merge on line {line_no} of {merges_path}: {line!r}"
-                    )
-                merges.append(
-                    (_decode_merge_token(parts[0]), _decode_merge_token(parts[1]))
-                )
+        vocab = data["token_to_id"]
+        merges = [tuple(pair) for pair in data["merges"]]
 
         self._vocab[key] = vocab
         self._merges[key] = merges
@@ -262,11 +233,11 @@ class Tokenizer:
         return self._write_artifacts(form, vocab, merges)
 
     def generate_tokens_nfc(self, text: str) -> Path:
-        """Train BPE with NFC normalization; write vocab_nfc.json and merges_nfc.txt."""
+        """Train BPE with NFC normalization; write tokenizer_nfc.json."""
         return self._generate_tokens(text, "NFC")
 
     def generate_tokens_nfd(self, text: str) -> Path:
-        """Train BPE with NFD normalization; write vocab_nfd.json and merges_nfd.txt."""
+        """Train BPE with NFD normalization; write tokenizer_nfd.json."""
         return self._generate_tokens(text, "NFD")
 
     def _tokenize(self, text: str, form: str) -> list[int]:
@@ -297,10 +268,10 @@ if __name__ == "__main__":
     out = Path(__file__).resolve().parent / "tokenizer_v2_artifacts"
     tok = Tokenizer(vocab_size=300, output_dir=out)
 
-    nfc_vocab = tok.generate_tokens_nfc(corpus_text)
-    nfd_vocab = tok.generate_tokens_nfd(corpus_text)
-    print(f"NFC vocab -> {nfc_vocab}")
-    print(f"NFD vocab -> {nfd_vocab}")
+    nfc_path = tok.generate_tokens_nfc(corpus_text)
+    nfd_path = tok.generate_tokens_nfd(corpus_text)
+    print(f"NFC tokenizer -> {nfc_path}")
+    print(f"NFD tokenizer -> {nfd_path}")
     print(f"NFC vocab size: {len(tok._vocab['nfc'])}")
     print(f"NFD vocab size: {len(tok._vocab['nfd'])}")
     print(f"NFC merges: {len(tok._merges['nfc'])}")
