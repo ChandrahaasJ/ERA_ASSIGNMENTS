@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tokenizer Visualizer</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #ececec;
+      color: #1a1a1a;
+      padding: 16px;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 640px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .card {
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 14px 16px;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 140px;
+      border: none;
+      outline: none;
+      resize: vertical;
+      font-family: "Roboto Mono", "Menlo", "Consolas", monospace;
+      font-size: 14px;
+      line-height: 1.5;
+      color: #1a1a1a;
+      background: transparent;
+    }
+
+    .label {
+      font-size: 13px;
+      color: #666;
+      margin-bottom: 6px;
+    }
+
+    .token-count {
+      font-family: "Roboto Mono", "Menlo", "Consolas", monospace;
+      font-size: 28px;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+
+    .token-output {
+      font-family: "Roboto Mono", "Menlo", "Consolas", monospace;
+      font-size: 14px;
+      line-height: 1.65;
+      word-break: break-word;
+      white-space: pre-wrap;
+    }
+
+    .token-output .tok {
+      border-radius: 3px;
+      padding: 1px 0;
+    }
+
+    .token-ids {
+      font-family: "Roboto Mono", "Menlo", "Consolas", monospace;
+      font-size: 13px;
+      line-height: 1.6;
+      word-break: break-all;
+      color: #333;
+    }
+
+    .status {
+      font-size: 13px;
+      color: #888;
+      text-align: center;
+      padding: 8px;
+    }
+
+    .status.error { color: #c0392b; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <textarea id="input" spellcheck="false" placeholder="Enter text to tokenize…"></textarea>
+    </div>
+
+    <div class="card">
+      <div class="label">Token count</div>
+      <div class="token-count" id="count">0</div>
+    </div>
+
+    <div class="card">
+      <div class="token-output" id="output"></div>
+    </div>
+
+    <div class="card">
+      <div class="token-ids" id="token-ids"></div>
+    </div>
+
+    <div class="status" id="status">Loading tokenizer.json…</div>
+  </div>
+
+  <script>
+    const COLORS = [
+      "#cce5ff",
+      "#fff3cd",
+      "#d4edda",
+      "#f8d7da",
+      "#e2d5f1",
+      "#d1ecf1",
+    ];
+
+    const TELUGU_CONSONANTS = new Set(
+      Array.from({ length: 0x0C3A - 0x0C15 }, (_, i) => String.fromCharCode(0x0C15 + i))
+    );
+    const TELUGU_VOWELS = new Set(
+      Array.from({ length: 0x0C15 - 0x0C05 }, (_, i) => String.fromCharCode(0x0C05 + i))
+    );
+    const TELUGU_VIRAMA = "\u0C4D";
+    const TELUGU_MATRAS = new Set(
+      [...Array.from({ length: 0x0C4D - 0x0C3E }, (_, i) => String.fromCharCode(0x0C3E + i)), "\u0C55", "\u0C56"]
+    );
+    const TELUGU_ANUSVARA = "\u0C02";
+
+    const DEVANAGARI_CONSONANTS = new Set([
+      ...Array.from({ length: 0x093A - 0x0915 }, (_, i) => String.fromCharCode(0x0915 + i)),
+      ...Array.from({ length: 0x0960 - 0x0958 }, (_, i) => String.fromCharCode(0x0958 + i)),
+    ]);
+    const DEVANAGARI_VOWELS = new Set(
+      Array.from({ length: 0x0914 - 0x0905 }, (_, i) => String.fromCharCode(0x0905 + i))
+    );
+    const DEVANAGARI_VIRAMA = "\u094D";
+    const DEVANAGARI_MATRAS = new Set(
+      Array.from({ length: 0x094F - 0x093E }, (_, i) => String.fromCharCode(0x093E + i))
+    );
+    const DEVANAGARI_CHANDRABINDHU = "\u0901";
+    const DEVANAGARI_ANUSVARA = "\u0902";
+    const DEVANAGARI_VISARGA = "\u0903";
+    const DEVANAGARI_NUKTA = "\u093C";
+
+    let tokenizer = null;
+
+    function containsTelugu(text) {
+      return [...text].some((ch) => {
+        const code = ch.charCodeAt(0);
+        return code >= 0x0C00 && code <= 0x0C7F;
+      });
+    }
+
+    function containsDevanagari(text) {
+      return [...text].some((ch) => {
+        const code = ch.charCodeAt(0);
+        return code >= 0x0900 && code <= 0x097F;
+      });
+    }
+
+    function splitCharwiseWord(word) {
+      return [...word];
+    }
+
+    function splitMathrawiseWord(word, script) {
+      if (!word) return [];
+
+      const isConsonant = script === "te"
+        ? (ch) => TELUGU_CONSONANTS.has(ch)
+        : (ch) => DEVANAGARI_CONSONANTS.has(ch);
+      const isVowel = script === "te"
+        ? (ch) => TELUGU_VOWELS.has(ch)
+        : (ch) => DEVANAGARI_VOWELS.has(ch);
+      const virama = script === "te" ? TELUGU_VIRAMA : DEVANAGARI_VIRAMA;
+      const matras = script === "te" ? TELUGU_MATRAS : DEVANAGARI_MATRAS;
+      const chandrabindhu = script === "te"
+        ? new Set([TELUGU_ANUSVARA])
+        : new Set([DEVANAGARI_CHANDRABINDHU, DEVANAGARI_ANUSVARA, DEVANAGARI_VISARGA]);
+
+      const clusters = [];
+      let i = 0;
+      while (i < word.length) {
+        let cluster = word[i];
+        i += 1;
+
+        if (isConsonant(cluster) || isVowel(cluster)) {
+          while (i < word.length && word[i] === virama) {
+            if (i + 1 < word.length && isConsonant(word[i + 1])) {
+              cluster += word[i] + word[i + 1];
+              i += 2;
+            } else {
+              cluster += word[i];
+              i += 1;
+            }
+          }
+
+          while (i < word.length && (matras.has(word[i]) || chandrabindhu.has(word[i]))) {
+            cluster += word[i];
+            i += 1;
+          }
+
+          if (script === "hi" && i < word.length && word[i] === DEVANAGARI_NUKTA) {
+            cluster += word[i];
+            i += 1;
+          }
+        }
+
+        clusters.push(cluster);
+      }
+
+      return clusters;
+    }
+
+    function splitWord(word, splitMode) {
+      if (containsTelugu(word)) {
+        return splitMode === "mathrawise"
+          ? splitMathrawiseWord(word, "te")
+          : splitCharwiseWord(word);
+      }
+      if (containsDevanagari(word)) {
+        return splitMode === "mathrawise"
+          ? splitMathrawiseWord(word, "hi")
+          : splitCharwiseWord(word);
+      }
+      return splitCharwiseWord(word);
+    }
+
+    function splitLine(text, splitMode) {
+      const tokens = [];
+      const parts = text.split(/(\s+)/);
+      for (const part of parts) {
+        if (!part) continue;
+        if (/^\s+$/.test(part)) {
+          tokens.push(...[...part]);
+        } else {
+          tokens.push(...splitWord(part, splitMode));
+        }
+      }
+      return tokens;
+    }
+
+    function mergePair(tokens, pair) {
+      const [a, b] = pair;
+      const merged = a + b;
+      const result = [];
+      let i = 0;
+      while (i < tokens.length) {
+        if (i < tokens.length - 1 && tokens[i] === a && tokens[i + 1] === b) {
+          result.push(merged);
+          i += 2;
+        } else {
+          result.push(tokens[i]);
+          i += 1;
+        }
+      }
+      return result;
+    }
+
+    function encode(text, data) {
+      if (!text) return [];
+
+      let tokens = splitLine(text, data.split_mode || "mathrawise");
+      for (const pair of data.merges || []) {
+        tokens = mergePair(tokens, pair);
+      }
+      return tokens;
+    }
+
+    function tokenId(token, data) {
+      if (data.token_to_id && Object.prototype.hasOwnProperty.call(data.token_to_id, token)) {
+        return data.token_to_id[token];
+      }
+      return -1;
+    }
+
+    function render() {
+      if (!tokenizer) return;
+
+      const text = document.getElementById("input").value;
+      const tokens = encode(text, tokenizer);
+      const countEl = document.getElementById("count");
+      const outputEl = document.getElementById("output");
+      const idsEl = document.getElementById("token-ids");
+
+      countEl.textContent = String(tokens.length);
+
+      outputEl.innerHTML = tokens
+        .map((tok, i) => {
+          const color = COLORS[i % COLORS.length];
+          const escaped = tok
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;");
+          return `<span class="tok" style="background-color:${color}">${escaped}</span>`;
+        })
+        .join("");
+
+      idsEl.textContent = tokens.map((tok) => tokenId(tok, tokenizer)).join(", ");
+    }
+
+    async function init() {
+      const statusEl = document.getElementById("status");
+      try {
+        const response = await fetch("tokenizer.json");
+        if (!response.ok) {
+          throw new Error(`Failed to load tokenizer.json (${response.status})`);
+        }
+        tokenizer = await response.json();
+        statusEl.textContent = "";
+        statusEl.style.display = "none";
+
+        const input = document.getElementById("input");
+        input.value = "<|im_start|>system<|im_sep|>You are a helpful assistant\n<|im_start|>user<|im_sep|>\n\n<|im_start|>assistant<|im_sep|>\n";
+        input.addEventListener("input", render);
+        render();
+      } catch (err) {
+        statusEl.textContent = err.message;
+        statusEl.classList.add("error");
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
