@@ -1,5 +1,7 @@
 """Week 4 assignment utilities."""
 
+import hashlib
+
 
 class utils:
     """Utility helpers for text processing."""
@@ -32,5 +34,6 @@ class utils:
         return shingles
 
     def hash(self, content: str) -> int:
-        """Return an integer hash for the given content."""
-        return hash(content)
+        """Return a deterministic integer hash for the given content."""
+        digest = hashlib.md5(content.encode("utf-8")).hexdigest()
+        return int(digest, 16)
