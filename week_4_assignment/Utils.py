@@ -30,3 +30,7 @@ class utils:
             i += step
 
         return shingles
+
+    def hash(self, content: str) -> int:
+        """Return an integer hash for the given content."""
+        return hash(content)
