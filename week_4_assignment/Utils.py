@@ -3,7 +3,7 @@
 import hashlib
 
 
-class utils:
+class Utils:
     """Utility helpers for text processing."""
 
     def get_shingles(self, n: int, content: str, overlap: int = 0) -> list[str]:
@@ -37,3 +37,4 @@ class utils:
         """Return a deterministic integer hash for the given content."""
         digest = hashlib.md5(content.encode("utf-8")).hexdigest()
         return int(digest, 16)
+
